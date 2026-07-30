@@ -1,0 +1,349 @@
+{{template "base" .}}
+{{define "content"}}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const p = new URLSearchParams(window.location.search);
+    const t = p.get('toast');
+    if (t === 'create_success') showToast('User berhasil ditambahkan', 'success');
+    if (t === 'edit_success')   showToast('User berhasil diperbarui', 'success');
+    if (t === 'delete_success') showToast('User berhasil dihapus', 'success');
+    if (t === 'delete_error')   showToast('Gagal menghapus user', 'error');
+    if (t === 'self_delete_error') showToast('Tidak bisa menghapus akun sendiri', 'error');
+  });
+</script>
+
+<!-- Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+  <div>
+    <p class="text-sm text-base-content/60 mt-0.5">Manajemen akun dan data karyawan pemohon</p>
+  </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="tabs tabs-bordered mb-5">
+  <a href="/users" class="tab tab-bordered {{if not .ShowEmployees}}tab-active{{end}} font-medium">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      class="w-4 h-4 mr-1.5">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+    </svg>
+    User Akun
+  </a>
+  <a href="/users?tab=employees" class="tab tab-bordered {{if .ShowEmployees}}tab-active{{end}} font-medium">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      class="w-4 h-4 mr-1.5">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Zm1.294 6.336a6.721 6.721 0 0 1-3.17.789 6.721 6.721 0 0 1-3.168-.789 3.376 3.376 0 0 1 6.338 0Z" />
+    </svg>
+    Karyawan Pemohon
+  </a>
+</div>
+
+{{if not .ShowEmployees}}
+{{/* ═══════════════════════════════ TAB: USER AKUN ═══════════════════════════════ */}}
+
+<!-- Filter Bar -->
+<div class="flex justify-between items-center mb-4">
+  <a href="/users/create" class="btn btn-primary btn-sm gap-2 flex-shrink-0">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+      class="w-4 h-4">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+    Tambah Akun
+  </a>
+</div>
+<div class="card bg-base-100 shadow-sm border border-base-200 mb-5">
+  <div class="card-body p-4">
+    <form method="GET" action="/users" class="flex flex-col sm:flex-row gap-3">
+      <select name="role" class="select select-bordered select-sm w-full sm:w-48" onchange="this.form.submit()">
+        <option value="">Semua Role</option>
+        {{range .Roles}}
+        <option value="{{.value}}" {{if eq $.RoleFilter .value}}selected{{end}}>{{.label}}</option>
+        {{end}}
+      </select>
+      <div class="flex gap-2 flex-1">
+        <input type="text" name="search" value="{{.Search}}" placeholder="Cari nama atau username..."
+          class="input input-bordered input-sm flex-1" />
+        <button type="submit" class="btn btn-sm btn-primary">Cari</button>
+        {{if or .Search .RoleFilter}}
+        <a href="/users" class="btn btn-sm btn-ghost">Reset</a>
+        {{end}}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Users Table -->
+<div class="card bg-base-100 shadow-sm border border-base-200">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr class="bg-base-200/60">
+            <th class="w-8">#</th>
+            <th>Nama Lengkap</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Divisi</th>
+            <th>Tgl Dibuat</th>
+            <th class="text-right">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{if not .Users}}
+          <tr>
+            <td colspan="7" class="text-center text-base-content/50 py-8">Tidak ada user ditemukan.</td>
+          </tr>
+          {{end}}
+          {{range $i, $u := .Users}}
+          <tr class="hover">
+            <td class="text-base-content/50 text-xs">{{add $i 1}}</td>
+            <td>
+              <div class="font-medium">{{$u.FullName}}</div>
+              {{if $u.TelegramChatID}}<div class="text-xs text-base-content/50">TG: {{$u.TelegramChatID}}</div>{{end}}
+            </td>
+            <td class="font-mono text-sm">{{$u.Username}}</td>
+            <td>
+              {{if eq $u.Role "admin_sp"}}
+              <span style="background:rgba(220,38,38,0.08);color:#dc2626;border:1px solid rgba(220,38,38,0.2)"
+                class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+                <span style="background:#dc2626" class="w-1.5 h-1.5 rounded-full"></span>Admin SP</span>
+              {{else if eq $u.Role "spv_sp"}}
+              <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)"
+                class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+                <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full"></span>SPV SP</span>
+              {{else if eq $u.Role "spv_pemohon"}}
+              <span style="background:rgba(6,182,212,0.08);color:#0891b2;border:1px solid rgba(6,182,212,0.2)"
+                class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+                <span style="background:#0891b2" class="w-1.5 h-1.5 rounded-full"></span>SPV Pemohon</span>
+              {{else if eq $u.Role "pemohon"}}
+              <span style="background:rgba(22,163,74,0.08);color:#16a34a;border:1px solid rgba(22,163,74,0.2)"
+                class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+                <span style="background:#16a34a" class="w-1.5 h-1.5 rounded-full"></span>Pemohon</span>
+              {{else}}
+              <span
+                class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md bg-gray-100 text-gray-500">{{$u.Role}}</span>
+              {{end}}
+            </td>
+            <td>
+              {{if $u.Division}}<span class="badge badge-outline badge-sm">{{$u.Division}}</span>
+              {{else}}<span class="text-base-content/30 text-xs">-</span>{{end}}
+            </td>
+            <td class="text-sm text-base-content/60">{{formatDate $u.CreatedAt}}</td>
+            <td class="text-right">
+              <div class="flex justify-end gap-1">
+                <a href="/users/{{$u.ID}}/edit" class="btn btn-xs btn-ghost">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-3.5 h-3.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                  </svg>
+                  Edit
+                </a>
+                <button onclick="document.getElementById('confirm-delete-{{$u.ID}}').showModal()"
+                  class="btn btn-xs btn-ghost" style="color:#dc2626">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-3.5 h-3.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                  </svg>
+                  Hapus
+                </button>
+              </div>
+              <dialog id="confirm-delete-{{$u.ID}}" class="modal">
+                <div class="modal-box text-left">
+                  <button type="button" onclick="document.getElementById('confirm-delete-{{$u.ID}}').close()"
+                    class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1.5 transition-colors">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </button>
+
+                  <div class="flex flex-col items-center text-center pt-2 pb-1">
+                    <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                      <svg class="w-8 h-8" style="color:#a3a3a3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                          clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                    <h3 class="font-bold text-base text-gray-800 mb-1">Hapus User?</h3>
+                    <p class="text-sm text-gray-500">
+                      Apakah Anda yakin ingin menghapus <strong class="text-gray-700">{{$u.FullName}}</strong>
+                      <span class="text-gray-400">({{$u.Username}})</span>?
+                    </p>
+                  </div>
+
+                  <div class="modal-action justify-center gap-3 mt-5">
+                    <form method="dialog">
+                      <button class="btn btn-sm btn-ghost border border-gray-200 min-w-24">Batal</button>
+                    </form>
+                    <form method="POST" action="/users/{{$u.ID}}/delete">
+                      <button type="submit" class="btn btn-sm text-white min-w-24"
+                        style="background:#dc2626;border-color:#dc2626">Ya, Hapus</button>
+                    </form>
+                  </div>
+                </div>
+                <form method="dialog" class="modal-backdrop"><button>close</button></form>
+              </dialog>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{{else}}
+{{/* ═══════════════════════════════ TAB: KARYAWAN PEMOHON ═══════════════════════════════ */}}
+
+<div class="flex justify-between items-center mb-4">
+  <a href="/employees/create" class="btn btn-primary btn-sm gap-2 flex-shrink-0">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+      class="w-4 h-4">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+    Tambah Karyawan
+  </a>
+</div>
+
+<!-- Search -->
+<div class="card bg-base-100 shadow-sm border border-base-200 mb-5">
+  <div class="card-body p-4">
+    <form method="GET" action="/users" class="flex gap-2">
+      <input type="hidden" name="tab" value="employees">
+      <input type="text" name="search" value="{{.Search}}" placeholder="Cari nama atau nomor ID..."
+        class="input input-bordered input-sm flex-1" />
+      <button type="submit" class="btn btn-sm btn-primary">Cari</button>
+      {{if .Search}}<a href="/users?tab=employees" class="btn btn-sm btn-ghost">Reset</a>{{end}}
+    </form>
+  </div>
+</div>
+
+<!-- Employees Table -->
+<div class="card bg-base-100 shadow-sm border border-base-200">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr class="bg-base-200/60">
+            <th class="w-8">#</th>
+            <th>Nama Lengkap</th>
+            <th>Nomor ID</th>
+            <th>Status</th>
+            <th>Ditambahkan Oleh</th>
+            <th>Tgl Daftar</th>
+            <th class="text-right">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{if not .Employees}}
+          <tr>
+            <td colspan="7" class="text-center text-base-content/50 py-8">
+              Belum ada karyawan. <a href="/employees/create" class="link link-primary">Tambah sekarang</a>
+            </td>
+          </tr>
+          {{end}}
+          {{range $i, $e := .Employees}}
+          <tr class="hover">
+            <td class="text-base-content/50 text-xs">{{add $i 1}}</td>
+            <td>
+              <div class="font-medium">{{$e.FullName}}</div>
+              {{if $e.Notes}}<div class="text-xs text-base-content/40">{{$e.Notes}}</div>{{end}}
+            </td>
+            <td><code class="text-xs bg-base-200 px-2 py-0.5 rounded">{{$e.IDCardNumber}}</code></td>
+            <td>
+              {{if $e.IsActive}}
+              <span style="background:rgba(22,163,74,0.08);color:#16a34a;border:1px solid rgba(22,163,74,0.2)"
+                class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+                <span style="background:#16a34a" class="w-1.5 h-1.5 rounded-full"></span>Aktif</span>
+              {{else}}
+              <span style="background:rgba(220,38,38,0.08);color:#dc2626;border:1px solid rgba(220,38,38,0.2)"
+                class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+                <span style="background:#dc2626" class="w-1.5 h-1.5 rounded-full"></span>Nonaktif</span>
+              {{end}}
+            </td>
+            <td class="text-sm text-base-content/60">{{$e.CreatedByName}}</td>
+            <td class="text-sm text-base-content/60">{{formatDate $e.CreatedAt}}</td>
+            <td class="text-right">
+              <div class="flex justify-end gap-1">
+                <a href="/employees/{{$e.ID}}/edit" class="btn btn-xs btn-ghost">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-3.5 h-3.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                  </svg>
+                  Edit
+                </a>
+                <button onclick="document.getElementById('confirm-del-emp-{{$e.ID}}').showModal()"
+                  class="btn btn-xs btn-ghost" style="color:#dc2626">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-3.5 h-3.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                  </svg>
+                  Hapus
+                </button>
+              </div>
+              <dialog id="confirm-del-emp-{{$e.ID}}" class="modal">
+                <div class="modal-box text-left">
+                  <button type="button" onclick="document.getElementById('confirm-del-emp-{{$e.ID}}').close()"
+                    class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1.5 transition-colors">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </button>
+
+                  <div class="flex flex-col items-center text-center pt-2 pb-1">
+                    <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                      <svg class="w-8 h-8" style="color:#a3a3a3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                          clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                    <h3 class="font-bold text-base text-gray-800 mb-1">Hapus Karyawan?</h3>
+                    <p class="text-sm text-gray-500 mb-3">
+                      Apakah Anda yakin ingin menghapus <strong class="text-gray-700">{{$e.FullName}}</strong>?
+                    </p>
+                    <div
+                      class="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 text-left">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-4 h-4 flex-shrink-0 mt-0.5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                      </svg>
+                      <span>Pertimbangkan untuk <strong>menonaktifkan</strong> saja agar riwayat
+                        pengambilan tetap tersimpan.</span>
+                    </div>
+                  </div>
+
+                  <div class="modal-action justify-center gap-3 mt-5">
+                    <form method="dialog">
+                      <button class="btn btn-sm btn-ghost border border-gray-200 min-w-24">Batal</button>
+                    </form>
+                    <form method="POST" action="/employees/{{$e.ID}}/delete">
+                      <button type="submit" class="btn btn-sm text-white min-w-24"
+                        style="background:#dc2626;border-color:#dc2626">Ya, Hapus Permanen</button>
+                    </form>
+                  </div>
+                </div>
+                <form method="dialog" class="modal-backdrop"><button>close</button></form>
+              </dialog>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{end}}

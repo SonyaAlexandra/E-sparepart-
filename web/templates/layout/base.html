@@ -1,0 +1,266 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{.Title}}</title>
+  <link rel="stylesheet" href="/static/css/app.css" />
+  <script src="/static/js/app.js" defer></script>
+  <style>
+    /* Brand color overrides */
+    :root {
+      --sidebar-bg: #0B2D59;
+      --primary: #568C20;
+      --accent-blue: #669EBF;
+      --accent-blue-light: #96C6D6;
+      --olive: #81A64B;
+    }
+
+    .sidebar {
+      background-color: var(--sidebar-bg);
+    }
+
+    .btn-primary {
+      background-color: var(--primary) !important;
+      border-color: var(--primary) !important;
+    }
+
+    .table thead th {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .nav-active {
+      background-color: rgba(255, 255, 255, 0.15);
+      border-left: 3px solid #96C6D6;
+    }
+
+    [x-cloak] { display: none !important; }
+
+    .table-responsive {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 75vh;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .table-responsive thead th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    @media (max-width: 640px) {
+      .modal-box {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        margin: 0 auto;
+      }
+      .card-body {
+        padding: 0.85rem;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-base-200 min-h-screen flex">
+
+  {{template "sidebar" .}}
+
+  <div x-data x-show="false" @toggle-sidebar.window="$el.style.display = ($el.style.display === 'block' ? 'none' : 'block')"
+    class="fixed inset-0 bg-black/40 z-20 lg:hidden" style="display:none"
+    @click="$dispatch('toggle-sidebar')"></div>
+
+  <div class="flex-1 flex flex-col min-h-screen ml-0 lg:ml-64">
+
+    <header class="bg-white shadow-sm px-6 py-3 flex items-center justify-between sticky top-0 z-20">
+      <button class="lg:hidden btn btn-ghost btn-sm" @click="$dispatch('toggle-sidebar')">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+          class="w-6 h-6">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+        </svg>
+      </button>
+
+      <h1 class="text-lg font-semibold text-gray-700">{{.Title}}</h1>
+
+      <div class="flex items-center gap-3">
+
+        <div class="relative" x-data="{ open: false }">
+          <button class="btn btn-ghost btn-sm relative" @click="open=!open; $el.querySelector('#notif-badge')?.remove()" hx-get="/notifikasi"
+            hx-target="#notif-dropdown" hx-swap="innerHTML" hx-trigger="click">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+            </svg>
+            {{if gt .NotifCount 0}}
+            <span id="notif-badge" class="badge badge-error badge-xs absolute -top-1 -right-1">{{.NotifCount}}</span>
+            {{end}}
+          </button>
+          <div id="notif-dropdown" x-show="open" x-cloak @click.outside="open=false" @keydown.escape.window="open=false"
+            class="absolute right-0 top-10 w-80 bg-white shadow-xl rounded-xl z-50 border p-2 max-h-96 overflow-y-auto">
+            {{if eq .CurrentPath "/dashboard"}}
+            <p class="text-sm text-gray-400 text-center py-4">Klik bel untuk muat notifikasi</p>
+            {{end}}
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 text-sm">
+          <div class="avatar placeholder">
+            <div class="bg-neutral text-neutral-content rounded-full w-8">
+              <span class="text-xs">{{slice .UserName 1}}</span>
+            </div>
+          </div>
+          <div class="hidden sm:block">
+            <p class="font-medium text-gray-700 leading-none">{{.UserName}}</p>
+            <p class="text-xs text-gray-400 capitalize">{{.UserRole}}</p>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <main class="flex-1 p-3 sm:p-6">
+      {{template "content" .}}
+    </main>
+    <footer class="text-center text-xs text-gray-400 py-3 border-t bg-white">
+      © 2026 PT Bintang Toedjoe • Developed by SNYLXNP
+    </footer>
+  </div>
+
+  <div id="toast-container"
+    style="position:fixed;top:72px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:10px;align-items:flex-end;pointer-events:none;max-width:380px">
+  </div>
+
+  <style>
+    .g-toast {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
+      padding: 12px 14px;
+      font-size: 13.5px;
+      font-family: sans-serif;
+      pointer-events: auto;
+      max-width: 360px;
+      word-break: break-word;
+      border-left: 4px solid #e5e7eb;
+      opacity: 0;
+      transform: translateX(30px) scale(0.96);
+      transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+    }
+
+    .g-toast.show {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+
+    .g-toast.hide {
+      opacity: 0;
+      transform: translateX(30px) scale(0.95);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .g-toast-icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      margin-top: 1px;
+    }
+
+    .g-toast-body {
+      flex: 1;
+      line-height: 1.4;
+    }
+
+    .g-toast-title {
+      font-weight: 600;
+      margin-bottom: 1px;
+    }
+
+    .g-toast-msg {
+      color: #4b5563;
+    }
+
+    .g-toast-close {
+      flex-shrink: 0;
+      cursor: pointer;
+      color: #9ca3af;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0 2px;
+      background: none;
+      border: none;
+      margin-top: -1px;
+    }
+
+    .g-toast-close:hover {
+      color: #374151;
+    }
+
+    /* Type colours */
+    .g-toast.success {
+      border-left-color: #22c55e;
+    }
+
+    .g-toast.error {
+      border-left-color: #ef4444;
+    }
+
+    .g-toast.warning {
+      border-left-color: #f59e0b;
+    }
+
+    .g-toast.info {
+      border-left-color: #3b82f6;
+    }
+  </style>
+
+  <script>
+    function showToast(message, type, duration) {
+      if (!type) type = 'info';
+      if (!duration) duration = 4000;
+
+      var icons = {
+        success: '<svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" class="g-toast-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>',
+        error: '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" class="g-toast-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>',
+        warning: '<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" class="g-toast-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>',
+        info: '<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" class="g-toast-icon"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>'
+      };
+
+      var container = document.getElementById('toast-container');
+      var toast = document.createElement('div');
+      toast.className = 'g-toast ' + type;
+      toast.innerHTML =
+        (icons[type] || icons.info) +
+        '<div class="g-toast-body"><div class="g-toast-msg">' + message + '</div></div>' +
+        '<button class="g-toast-close" onclick="this.closest(\'.g-toast\').remove()">&times;</button>';
+
+      container.appendChild(toast);
+
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { toast.classList.add('show'); });
+      });
+
+      setTimeout(function () {
+        toast.classList.add('hide');
+        setTimeout(function () { if (toast.parentNode) toast.remove(); }, 220);
+      }, duration);
+    }
+
+    // Listen for HX-Trigger stock error events from HTMX responses
+    document.addEventListener('showStockError', function (e) {
+      var stok = e.detail && e.detail.value ? e.detail.value : (e.detail || '');
+      showToast('\u274C Stok tidak mencukupi. Stok tersedia hanya ' + stok + ' pcs.', 'error', 5000);
+    });
+  </script>
+
+</body>
+
+</html>
+{{end}}

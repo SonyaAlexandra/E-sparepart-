@@ -1,0 +1,245 @@
+{{define "content"}}
+{{$st := .Request.Status}}
+{{$approvals := .Request.Approvals}}
+{{$cancelled := eq $st "cancelled"}}
+{{$canAct := .CanAct}}
+{{$done1 := false}}
+{{$done2 := false}}
+{{$done3 := false}}
+{{range $approvals}}
+  {{if and (eq .Stage 1) (eq .Action "release")}}{{$done1 = true}}{{end}}
+  {{if and (eq .Stage 2) (eq .Action "release")}}{{$done2 = true}}{{end}}
+  {{if and (eq .Stage 3) (eq .Action "release")}}{{$done3 = true}}{{end}}
+{{end}}
+
+<div class="p-4 md:p-6 max-w-4xl mx-auto space-y-4">
+
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body pb-6">
+
+      <div class="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <p class="text-md font-bold text-gray-800 font-mono tracking-wide">{{.Request.NoBPJT}}</p>
+          <p class="text-sm text-gray-500 mt-1">
+            Pemohon: <span class="font-semibold text-gray-700">{{.Request.NamaPemohon}}</span>
+            &nbsp;·&nbsp; Divisi: <span class="font-semibold text-gray-700">{{.Request.SeksiDivisi}}</span>
+            &nbsp;·&nbsp; {{formatDate .Request.SubmittedAt}}
+          </p>
+          {{if .Request.Keterangan}}
+          <p class="text-sm text-gray-500 mt-0.5">Ket: {{.Request.Keterangan}}</p>
+          {{end}}
+        </div>
+        <span class="badge badge-lg
+          {{if eq $st "approved"}}text-white{{else if eq $st "cancelled"}}badge-error{{else}}badge-warning{{end}}"
+          {{if eq $st "approved"}}style="background:#568C20;border-color:#568C20"{{end}}>
+          {{if eq $st "pending"}}Tahap 1 – SPV Pemohon
+          {{else if eq $st "stage1"}}Tahap 2 – Admin SP
+          {{else if eq $st "stage2"}}Tahap 3 – SPV SP
+          {{else if eq $st "approved"}}Disetujui
+          {{else}}Dibatalkan{{end}}
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2 mt-4">
+
+        <!-- Step 1: SPV Pemohon -->
+        <div class="flex items-center gap-1">
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
+            {{if $done1}}text-white{{else}}bg-gray-200 text-gray-400{{end}}"
+            style="{{if $done1}}background:#568C20{{end}}">
+            {{if $done1}}✓{{else}}1{{end}}
+          </div>
+          <span class="text-xs text-gray-500">SPV Pemohon</span>
+        </div>
+
+        <div class="h-px flex-1 {{if $done1}}bg-green-400{{else}}bg-gray-200{{end}}"></div>
+
+        <!-- Step 2: Admin SP -->
+        <div class="flex items-center gap-1">
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
+            {{if $done2}}text-white{{else}}bg-gray-200 text-gray-400{{end}}"
+            style="{{if $done2}}background:#568C20{{end}}">
+            {{if $done2}}✓{{else}}2{{end}}
+          </div>
+          <span class="text-xs text-gray-500">Admin SP</span>
+        </div>
+
+        <div class="h-px flex-1 {{if $done2}}bg-green-400{{else}}bg-gray-200{{end}}"></div>
+
+        <!-- Step 3: SPV SP -->
+        <div class="flex items-center gap-1">
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
+            {{if $done3}}text-white{{else if and $done2 (not $done3) (not $cancelled)}}bg-yellow-400 text-white{{else}}bg-gray-200 text-gray-400{{end}}"
+            {{if $done3}}style="background:#568C20"{{end}}>
+            {{if $done3}}✓{{else}}3{{end}}
+          </div>
+          <span class="text-xs text-gray-500">SPV SP</span>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Info Permintaan ── -->
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body py-4">
+      <h3 class="font-semibold text-gray-700 mb-3">Informasi Permintaan</h3>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-3 text-sm">
+        <div>
+          <p class="text-gray-400 text-xs mb-0.5">No. BPJT</p>
+          <p class="font-mono font-semibold">{{.Request.NoBPJT}}</p>
+        </div>
+        <div>
+          <p class="text-gray-400 text-xs mb-0.5">Nama Pemohon</p>
+          <p class="font-medium">{{.Request.NamaPemohon}}</p>
+        </div>
+        <div>
+          <p class="text-gray-400 text-xs mb-0.5">Seksi / Divisi</p>
+          <span class="badge badge-outline badge-sm">{{.Request.SeksiDivisi}}</span>
+        </div>
+        <div>
+          <p class="text-gray-400 text-xs mb-0.5">Tanggal Pemakaian</p>
+          <p>{{formatDate .Request.TanggalPemakaian}}</p>
+        </div>
+        <div>
+          <p class="text-gray-400 text-xs mb-0.5">Tanggal Pengajuan</p>
+          <p>{{formatDate .Request.SubmittedAt}}</p>
+        </div>
+        <div>
+          <p class="text-gray-400 text-xs mb-0.5">Status</p>
+          <span class="badge badge-sm" style="{{.Request.NIStatusStyle}}">{{.Request.NIStatusLabel}}</span>
+        </div>
+        {{if .Request.Keterangan}}
+        <div class="col-span-2 md:col-span-3">
+          <p class="text-gray-400 text-xs mb-0.5">Keterangan</p>
+          <p>{{.Request.Keterangan}}</p>
+        </div>
+        {{end}}
+        {{if .Request.LampiranURL}}
+        <div class="col-span-2 md:col-span-3">
+          <p class="text-gray-400 text-xs mb-0.5">Lampiran</p>
+          <a href="{{.Request.LampiranURL}}" target="_blank" class="link link-primary text-sm">Lihat Lampiran</a>
+        </div>
+        {{end}}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Items Table ── -->
+  <div class="card bg-base-100 shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <h3 class="font-semibold text-gray-700">Deskripsi Permintaan Barang/Jasa</h3>
+      <span class="text-sm text-gray-400">{{len .Request.Items}} item</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm w-full">
+        <thead>
+          <tr>
+            <th class="text-center w-10">No</th>
+            <th>Deskripsi Barang/Jasa</th>
+            <th class="text-center w-16">QTY</th>
+            <th>Peruntukan</th>
+            <th>Lampiran</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $i, $item := .Request.Items}}
+          <tr class="align-middle">
+            <td class="text-center text-gray-400">{{add $i 1}}</td>
+            <td class="font-medium">{{$item.Deskripsi}}</td>
+            <td class="text-center font-bold">{{$item.Qty}}</td>
+            <td>{{$item.Peruntukan}}</td>
+            <td class="text-gray-400">{{if $item.Lampiran}}{{$item.Lampiran}}{{else}}—{{end}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {{if .CanAct}}
+  <div class="card bg-white shadow-sm">
+    <div class="card-body">
+      <h3 class="font-semibold text-gray-700 mb-4">Tindakan Validasi</h3>
+      <div class="flex flex-wrap gap-3">
+
+        <!-- Release: langsung submit tanpa modal -->
+        <form action="/non-inventory/{{.Request.ID}}/release" method="POST">
+          <button type="submit" class="btn text-white" style="background:#568C20;border-color:#568C20">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            Release
+          </button>
+        </form>
+
+        <!-- Cancel button -->
+        <button type="button" class="btn btn-outline"
+          style="border-color:#eb2525;color:#c61f1f"
+          onclick="document.getElementById('confirm-cancel').showModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+            stroke="currentColor" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+          Cancel
+        </button>
+
+        <a href="javascript:history.back()" class="btn btn-ghost border">← Kembali</a>
+
+      </div>
+    </div>
+    
+  <dialog id="confirm-cancel" class="modal">
+    <div class="modal-box rounded-2xl text-left max-w-sm">
+      <button type="button" onclick="document.getElementById('confirm-cancel').close()"
+        class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1.5 transition-colors">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      <div class="flex flex-col items-center text-center pt-2 pb-1">
+        <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#dc2626" class="w-8 h-8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+          </svg>
+        </div>
+        <h3 class="font-bold text-base text-gray-800 mb-1">Batalkan Permintaan?</h3>
+        <p class="text-sm text-gray-500">
+          Permintaan <strong class="text-gray-700 font-mono">{{.Request.NoBPJT}}</strong> akan dibatalkan.
+          <span class="text-gray-400">Tindakan ini tidak dapat dibatalkan.</span>
+        </p>
+      </div>
+      <div class="modal-action justify-center gap-3 mt-5">
+        <form method="dialog">
+          <button class="btn btn-sm btn-ghost border border-gray-200 min-w-24">Tidak</button>
+        </form>
+        <form method="POST" action="/non-inventory/{{.Request.ID}}/cancel">
+          <button type="submit" class="btn btn-sm text-white min-w-24" style="background:#dc2626;border-color:#dc2626">Ya, Batalkan</button>
+        </form>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+  {{end}}
+
+  <!-- Footer actions: Download PDF & Kembali -->
+  <div class="flex flex-wrap items-center gap-3">
+    {{if eq $st "approved"}}
+    <a href="/non-inventory/{{.Request.ID}}/pdf" target="_blank" class="btn text-white" style="background:#568C20;border-color:#568C20">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+      </svg>
+      Download PDF
+    </a>
+    {{end}}
+    {{if not $canAct}}
+    <a href="javascript:history.back()" class="btn btn-ghost border">← Kembali</a>
+    {{end}}
+  </div>
+
+</div>
+{{end}}
+{{template "base" .}}

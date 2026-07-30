@@ -1,0 +1,445 @@
+{{template "base" .}}
+{{define "content"}}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const p = new URLSearchParams(window.location.search);
+    const t = p.get('toast');
+    if (t === 'tambah_success') showToast('Stok berhasil ditambahkan', 'success');
+    if (t === 'retur_success') showToast('Retur stok berhasil disimpan', 'success');
+    if (t === 'error') showToast('Gagal menyimpan data penerimaan', 'error');
+  });
+</script>
+
+<!-- Filter bar -->
+<form method="GET" action="/penerimaan" class="flex flex-wrap gap-3 mb-5 items-end">
+  <div class="form-control">
+    <label class="label pb-1"><span class="label-text text-sm font-medium">Dari Tanggal</span></label>
+    <input type="date" name="from" value="{{.FromDate}}" class="input input-bordered input-sm" />
+  </div>
+  <div class="form-control">
+    <label class="label pb-1"><span class="label-text text-sm font-medium">Sampai Tanggal</span></label>
+    <input type="date" name="to" value="{{.ToDate}}" class="input input-bordered input-sm" />
+  </div>
+  <button type="submit" class="btn btn-sm text-white" style="background:#568C20;border-color:#568C20">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      class="w-4 h-4">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+    </svg>
+    Filter
+  </button>
+  {{if or .FromDate .ToDate}}
+  <a href="/penerimaan" class="btn btn-sm btn-ghost border">Reset</a>
+  {{end}}
+  <!-- Excel download: ikut filter yang aktif -->
+  <a href="/penerimaan/excel?from={{.FromDate}}&to={{.ToDate}}" class="btn btn-sm btn-outline ml-auto"
+    style="border-color:#217346;color:#217346">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      class="w-4 h-4">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+    </svg>
+    Download Excel
+  </a>
+  <!-- Tombol aksi tambah / retur -->
+  <button type="button" class="btn btn-sm text-white" style="background:#568C20;border-color:#568C20"
+    onclick="document.getElementById('add-modal').showModal()">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      class="w-4 h-4">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+    Tambah Stok
+  </button>
+  <button type="button" class="btn btn-sm text-white" style="background:#568C20;border-color:#568C20"
+    onclick="document.getElementById('retur-modal').showModal()">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      class="w-4 h-4">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+    </svg>
+    Retur Stok
+  </button>
+</form>
+
+<!-- Total Nilai Transaksi card (dipindah dari Monitoring Sparepart) -->
+<div class="card bg-white shadow-sm p-5 mb-5">
+  <div class="flex flex-wrap gap-6">
+    <div>
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Total Transaksi</p>
+      <p class="text-2xl font-bold text-gray-800 mt-1">{{len .Receivings}}</p>
+    </div>
+    <div>
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Total Nilai Transaksi</p>
+      <p class="text-2xl font-bold mt-1" style="color:#568C20">{{formatRupiah .TotalValue}}</p>
+    </div>
+  </div>
+</div>
+
+<!-- History table -->
+<div class="card bg-white shadow-sm overflow-hidden">
+  <div class="table-responsive">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Tanggal</th>
+          <th>No PO</th>
+          <th>Kode Oracle</th>
+          <th>Deskripsi Item</th>
+          <th>Vendor</th>
+          <th class="text-center">Qty</th>
+          <th class="text-right">Harga</th>
+          <th>Tipe</th>
+          <th>Keterangan</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{if .Receivings}}
+        {{range $i, $r := .Receivings}}
+        <tr class="hover">
+          <td class="text-gray-400">{{add $i 1}}</td>
+          <td class="text-sm">{{formatDate $r.ReceivedAt}}</td>
+          <td class="text-xs font-mono text-gray-500">{{$r.NoPO}}</td>
+          <td class="text-xs font-mono text-gray-500">{{$r.KodeOracle}}</td>
+          <td class="font-medium text-sm">{{if $r.NamaItem}}{{$r.NamaItem}}{{else}}<span class="text-gray-400 italic text-xs">(data tidak tersedia)</span>{{end}}</td>
+          <td class="text-sm text-gray-500">{{$r.Vendor}}</td>
+          <td class="text-center font-bold">{{$r.Jumlah}}</td>
+          <td class="text-right text-sm">{{formatRupiah $r.Harga}}</td>
+          <td>
+            {{if eq $r.Tipe "tambah"}}
+            <span style="background:rgba(22,163,74,0.08);color:#16a34a;border:1px solid rgba(22,163,74,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#16a34a" class="w-1.5 h-1.5 rounded-full"></span>Tambah</span>
+            {{else}}
+            <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full"></span>Retur</span>
+            {{end}}
+          </td>
+          <td class="text-xs text-gray-400">{{$r.Keterangan}}</td>
+        </tr>
+        {{end}}
+        {{else}}
+        <tr>
+          <td colspan="10" class="text-center py-12 text-gray-400">Belum ada data penerimaan stok</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<dialog id="add-modal" class="modal">
+  <div class="modal-box max-w-lg">
+    <h3 class="font-bold text-lg mb-4">Tambah Stok Baru</h3>
+
+    <form id="add-form" method="POST" action="/penerimaan/save" novalidate x-data="{
+        submitted: false,
+        query: '',
+        suggestions: [],
+        selectedId: '',
+        showSuggestions: false,
+        loading: false,
+        async fetchSuggestions() {
+          if (this.query.length < 2) { this.suggestions = []; this.showSuggestions = false; return; }
+          this.loading = true;
+          try {
+            const res = await fetch('/katalog/search?q=' + encodeURIComponent(this.query));
+            this.suggestions = await res.json();
+            this.showSuggestions = this.suggestions && this.suggestions.length > 0;
+          } catch(e) { this.suggestions = []; }
+          this.loading = false;
+        },
+        selectItem(sp) {
+          this.query = sp.nama_item;
+          this.selectedId = sp.id;
+          this.showSuggestions = false;
+          // Auto-fill related fields
+          document.getElementById('add-kode-oracle').value = sp.kode_oracle || '';
+          document.getElementById('add-deskripsi').value = sp.deskripsi || '';
+          document.getElementById('add-harga').value = sp.harga || '';
+        },
+        clearSelection() {
+          this.selectedId = '';
+        }
+      }" @submit.prevent="
+        submitted = true;
+        const kodeOracleEl = document.getElementById('add-kode-oracle');
+        const jumlahEl = $el.querySelector('[name=jumlah]');
+        const isManual = !selectedId;
+        let errors = [];
+        if (isManual && !kodeOracleEl.value.trim()) errors.push('Kode Oracle wajib diisi.');
+        if (!jumlahEl.value || parseInt(jumlahEl.value) < 1) errors.push('Jumlah wajib diisi.');
+        if (!query.trim()) errors.push('Nama sparepart wajib diisi.');
+        if (errors.length > 0) {
+          errors.forEach(msg => showToast(msg, 'error'));
+          return;
+        }
+        $el.submit();
+      " @click.outside="showSuggestions = false">
+      <input type="hidden" name="tipe" value="tambah" />
+      <input type="hidden" name="sparepart_id" :value="selectedId" />
+
+      <div class="space-y-3">
+
+        <!-- Autocomplete Sparepart Name -->
+        <div class="form-control">
+          <label class="label pb-1">
+            <span class="label-text text-sm font-medium">Nama Sparepart <span class="text-error">*</span></span>
+            <span class="label-text-alt text-xs text-gray-400">Ketik untuk mencari atau isi manual</span>
+          </label>
+          <div class="relative">
+            <div class="flex gap-1 items-center input input-bordered input-sm px-2"
+              :class="submitted && !query ? 'input-error' : ''">
+              <svg x-show="loading" class="animate-spin w-3 h-3 text-gray-400 flex-shrink-0"
+                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+              </svg>
+              <input type="text" name="nama_item" x-model="query" required placeholder="Ketik nama sparepart..."
+                class="flex-1 bg-transparent outline-none text-sm py-0 border-0 h-full"
+                @input.debounce.300ms="fetchSuggestions(); clearSelection()"
+                @focus="if(query.length >= 2) fetchSuggestions()" @keydown.escape="showSuggestions = false"
+                @keydown.enter.prevent="" />
+              <button type="button" x-show="query" @click="query=''; selectedId=''; suggestions=[]; showSuggestions=false;
+                document.getElementById('add-kode-oracle').value='';
+                document.getElementById('add-deskripsi').value='';
+                document.getElementById('add-harga').value='';" class="text-gray-400 hover:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                  stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Dropdown suggestions -->
+            <div x-show="showSuggestions" x-transition
+              class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              <template x-for="sp in suggestions" :key="sp.id">
+                <div @click="selectItem(sp)"
+                  class="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <p class="text-sm font-medium text-gray-800" x-text="sp.nama_item"></p>
+                      <p class="text-xs text-gray-400" x-text="sp.kode_oracle"></p>
+                    </div>
+                    <span class="text-xs text-green-600 ml-2 flex-shrink-0" x-text="'Stok: ' + sp.stok"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Badge: terpilih dari katalog vs manual -->
+          <div class="mt-1 flex gap-2">
+            <span x-show="selectedId" class="badge badge-success badge-xs">✓ Dari katalog — fields akan diupdate</span>
+            <span x-show="query && !selectedId" class="badge badge-warning badge-xs">Input manual — nama baru</span>
+          </div>
+          <p class="text-error text-xs mt-1" x-show="submitted && !query">Nama sparepart wajib diisi</p>
+        </div>
+
+        <!-- Kode Oracle -->
+        <div class="form-control">
+          <label class="label pb-1"><span class="label-text text-sm font-medium">Kode Oracle <span
+                class="text-error">*</span></span></label>
+          <input type="text" id="add-kode-oracle" name="kode_oracle" placeholder="Kode Oracle"
+            :class="submitted && !selectedId && !$el.value ? 'input-error' : ''"
+            class="input input-bordered input-sm" />
+          <p class="text-error text-xs mt-1"
+            x-show="submitted && !selectedId && !document.getElementById('add-kode-oracle').value">Kode Oracle wajib
+            diisi.</p>
+        </div>
+
+        <!-- Deskripsi -->
+        <div class="form-control">
+          <label class="label pb-1"><span class="label-text text-sm font-medium">Deskripsi</span></label>
+          <input type="text" id="add-deskripsi" name="deskripsi" placeholder="Deskripsi sparepart"
+            class="input input-bordered input-sm" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">No PO</span></label>
+            <input type="text" name="no_po" placeholder="Contoh: PO-2024-001" class="input input-bordered input-sm" />
+          </div>
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">Vendor</span></label>
+            <input type="text" name="vendor" placeholder="Nama vendor" class="input input-bordered input-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">Jumlah <span
+                  class="text-error">*</span></span></label>
+            <input type="number" name="jumlah" min="1" placeholder="0" class="input input-bordered input-sm" required />
+          </div>
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">Harga Satuan</span></label>
+            <input type="number" id="add-harga" name="harga" min="0" step="0.01" placeholder="0"
+              class="input input-bordered input-sm" />
+          </div>
+        </div>
+        <div class="form-control">
+          <label class="label pb-1"><span class="label-text text-sm font-medium">Keterangan</span></label>
+          <input type="text" name="keterangan" placeholder="Catatan tambahan" class="input input-bordered input-sm" />
+        </div>
+      </div>
+
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost"
+          onclick="document.getElementById('add-modal').close(); document.getElementById('add-form').reset();">
+          Batal
+        </button>
+        <button type="submit" class="btn text-white" style="background:#568C20;border-color:#568C20">Simpan</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- ─── Retur Modal ─────────────────────────────────────────── -->
+<dialog id="retur-modal" class="modal">
+  <div class="modal-box max-w-lg">
+    <h3 class="font-bold text-lg mb-4">Retur Stok</h3>
+
+    <form id="retur-form" method="POST" action="/penerimaan/save" novalidate
+      x-data="{
+        submitted: false,
+        query: '',
+        suggestions: [],
+        selectedId: '',
+        selectedStok: null,
+        showSuggestions: false,
+        loading: false,
+        async fetchSuggestions() {
+          if (this.query.length < 2) { this.suggestions = []; this.showSuggestions = false; return; }
+          this.loading = true;
+          try {
+            const res = await fetch('/katalog/search?q=' + encodeURIComponent(this.query));
+            this.suggestions = await res.json();
+            this.showSuggestions = this.suggestions && this.suggestions.length > 0;
+          } catch(e) { this.suggestions = []; }
+          this.loading = false;
+        },
+        selectItem(sp) {
+          this.query = sp.nama_item + ' (' + sp.kode_oracle + ')';
+          this.selectedId = sp.id;
+          this.selectedStok = sp.stok;
+          this.showSuggestions = false;
+          document.getElementById('retur-nama-item').value  = sp.nama_item  || '';
+          document.getElementById('retur-kode-oracle').value = sp.kode_oracle || '';
+          document.getElementById('retur-sparepart-id').value = sp.id || '';
+        },
+        clearSelection() {
+          this.selectedId = '';
+          this.selectedStok = null;
+          document.getElementById('retur-nama-item').value  = '';
+          document.getElementById('retur-kode-oracle').value = '';
+          document.getElementById('retur-sparepart-id').value = '';
+        }
+      }"
+      @submit.prevent="
+        submitted = true;
+        if (!selectedId) { showToast('Pilih sparepart terlebih dahulu', 'error'); return; }
+        const jumlahEl = $el.querySelector('[name=jumlah]');
+        const keteranganEl = $el.querySelector('[name=keterangan]');
+        if (!jumlahEl.value || parseInt(jumlahEl.value) < 1) { showToast('Jumlah retur wajib diisi', 'error'); return; }
+        if (!keteranganEl.value.trim()) { showToast('Alasan retur wajib diisi', 'error'); return; }
+        $el.submit();
+      "
+      @click.outside="showSuggestions = false">
+      <input type="hidden" name="tipe" value="retur" />
+      <input type="hidden" name="sparepart_id" id="retur-sparepart-id" value="" />
+      <input type="hidden" name="nama_item"    id="retur-nama-item"    value="" />
+      <input type="hidden" name="kode_oracle"  id="retur-kode-oracle"  value="" />
+
+      <div class="space-y-3">
+
+        <!-- Autocomplete search sparepart -->
+        <div class="form-control">
+          <label class="label pb-1">
+            <span class="label-text text-sm font-medium">Sparepart <span class="text-error">*</span></span>
+            <span class="label-text-alt text-xs text-gray-400">Ketik untuk mencari</span>
+          </label>
+          <div class="relative">
+            <div class="flex gap-1 items-center input input-bordered input-sm px-2"
+              :class="submitted && !selectedId ? 'input-error' : ''">
+              <svg x-show="loading" class="animate-spin w-3 h-3 text-gray-400 flex-shrink-0"
+                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+              </svg>
+              <input type="text" x-model="query" placeholder="Ketik nama atau kode oracle..."
+                class="flex-1 bg-transparent outline-none text-sm py-0 border-0 h-full"
+                @input.debounce.300ms="fetchSuggestions(); clearSelection()"
+                @focus="if(query.length >= 2) fetchSuggestions()"
+                @keydown.escape="showSuggestions = false"
+                @keydown.enter.prevent="" />
+              <button type="button" x-show="query" @click="query=''; clearSelection(); suggestions=[]; showSuggestions=false;"
+                class="text-gray-400 hover:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Dropdown suggestions -->
+            <div x-show="showSuggestions" x-transition
+              class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              <template x-for="sp in suggestions" :key="sp.id">
+                <div @click="selectItem(sp)"
+                  class="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <p class="text-sm font-medium text-gray-800" x-text="sp.nama_item"></p>
+                      <p class="text-xs text-gray-400" x-text="sp.kode_oracle"></p>
+                    </div>
+                    <span class="text-xs ml-2 flex-shrink-0"
+                      :class="sp.stok <= 0 ? 'text-red-500' : 'text-green-600'"
+                      x-text="'Stok: ' + sp.stok"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Info stok terpilih -->
+          <div class="mt-1 flex gap-2 items-center">
+            <span x-show="selectedId" class="badge badge-success badge-xs">✓ Sparepart dipilih</span>
+            <span x-show="selectedId && selectedStok !== null"
+              class="text-xs" :class="selectedStok <= 0 ? 'text-red-500 font-semibold' : 'text-gray-400'"
+              x-text="'Stok saat ini: ' + selectedStok"></span>
+          </div>
+          <p class="text-error text-xs mt-1" x-show="submitted && !selectedId">Pilih sparepart terlebih dahulu</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">Jumlah Retur <span class="text-error">*</span></span></label>
+            <input type="number" name="jumlah" min="1" required placeholder="0" class="input input-bordered input-sm" />
+          </div>
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">No PO</span></label>
+            <input type="text" name="no_po" placeholder="Contoh: PO-2024-001" class="input input-bordered input-sm" />
+          </div>
+        </div>
+        <input type="hidden" name="harga" value="0" />
+        <div class="form-control">
+          <label class="label pb-1"><span class="label-text text-sm font-medium">Alasan Retur <span class="text-error">*</span></span></label>
+          <input type="text" name="keterangan" required placeholder="Alasan retur stok" class="input input-bordered input-sm" />
+        </div>
+      </div>
+
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost"
+          onclick="document.getElementById('retur-modal').close(); document.getElementById('retur-form').reset();">
+          Batal
+        </button>
+        <button type="submit" class="btn text-white" style="background:#568C20;border-color:#568C20">Simpan Retur</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+{{end}}

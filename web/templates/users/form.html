@@ -1,0 +1,134 @@
+{{template "base" .}}
+{{define "content"}}
+
+<style>
+  .checkbox-primary {
+    border-color: #568C20 !important;
+  }
+  .checkbox-primary:checked {
+    background-color: #568C20 !important;
+    border-color: #568C20 !important;
+    --chkbg: #568C20 !important;
+    --chkfg: white !important;
+  }
+  .checkbox-primary:focus {
+    outline-color: #568C20 !important;
+  }
+</style>
+
+<div class="max-w-lg mx-auto">
+  <!-- Breadcrumb -->
+  <div class="text-sm breadcrumbs mb-5 text-base-content/60">
+    <ul>
+      <li><a href="/users" class="hover:text-primary">Kelola User</a></li>
+      <li>{{.Title}}</li>
+    </ul>
+  </div>
+
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body">
+      <h2 class="card-title text-lg mb-1">{{.Title}}</h2>
+
+      {{if .Error}}
+      <div class="alert alert-error text-sm py-2 mb-3">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+        {{.Error}}
+      </div>
+      {{end}}
+
+      <form method="POST" action="/users/save" x-data="userForm()" @submit.prevent="submitForm">
+        {{if .IsEdit}}
+        <input type="hidden" name="id" value="{{.User.ID}}">
+        {{end}}
+
+        <!-- Nama Lengkap -->
+        <div class="form-control mb-4">
+          <label class="label"><span class="label-text font-medium">Nama Lengkap <span class="text-error">*</span></span></label>
+          <input type="text" name="full_name" required
+            value="{{if .User}}{{.User.FullName}}{{end}}"
+            placeholder="Nama lengkap user"
+            class="input input-bordered input-sm" />
+        </div>
+
+        <!-- Username -->
+        <div class="form-control mb-4">
+          <label class="label"><span class="label-text font-medium">Username <span class="text-error">*</span></span></label>
+          <input type="text" name="username" required
+            value="{{if .User}}{{.User.Username}}{{end}}"
+            placeholder="username"
+            class="input input-bordered input-sm font-mono" />
+        </div>
+
+        <!-- Password -->
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-medium">Password {{if not .IsEdit}}<span class="text-error">*</span>{{end}}</span>
+            {{if .IsEdit}}<span class="label-text-alt text-base-content/50">Kosongkan jika tidak ingin mengubah</span>{{end}}
+          </label>
+          <input type="password" name="password" {{if not .IsEdit}}required{{end}}
+            placeholder="{{if .IsEdit}}Password baru (opsional){{else}}Password{{end}}"
+            class="input input-bordered input-sm" />
+        </div>
+
+        <!-- Role -->
+        <div class="form-control mb-4">
+          <label class="label"><span class="label-text font-medium">Role <span class="text-error">*</span></span></label>
+          <select name="role" required x-model="selectedRole" class="select select-bordered select-sm">
+            <option value="">Pilih Role</option>
+            {{range .Roles}}
+            <option value="{{.value}}" {{if and $.User (eq $.User.Role .value)}}selected{{end}}>{{.label}}</option>
+            {{end}}
+          </select>
+        </div>
+
+        <!-- Divisi — tampil jika role = spv_pemohon atau spv_sp -->
+        <div class="form-control mb-4" x-show="selectedRole === 'spv_pemohon' || selectedRole === 'spv_sp'" x-transition>
+          <label class="label">
+            <span class="label-text font-medium">
+              Seksi / Divisi
+              <span class="text-error" x-show="selectedRole === 'spv_pemohon'">*</span>
+              <span class="text-gray-400 text-xs" x-show="selectedRole === 'spv_sp'">(opsional)</span>
+            </span>
+            <span class="label-text-alt text-base-content/50">Bisa pilih lebih dari satu</span>
+          </label>
+          <div class="flex flex-wrap gap-3 mt-1 p-3 border border-base-300 rounded-lg bg-base-50">
+            {{range .Divisions}}
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="division" value="{{.}}"
+                class="checkbox checkbox-sm checkbox-primary"
+                {{if and $.User (hasDivision $.User.Division .)}}checked{{end}} />
+              <span class="text-sm font-medium">{{.}}</span>
+            </label>
+            {{end}}
+          </div>
+          <label class="label">
+            <span class="label-text-alt text-base-content/50">SPV Pemohon harus memilih minimal 1 seksi</span>
+          </label>
+        </div>
+
+
+        <!-- Actions -->
+        <div class="flex gap-2 justify-end">
+          <a href="/users" class="btn btn-sm btn-ghost">Batal</a>
+          <button type="submit" class="btn btn-sm btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" /></svg>
+            {{if .IsEdit}}Simpan Perubahan{{else}}Tambah User{{end}}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function userForm() {
+    return {
+      selectedRole: '{{if .User}}{{.User.Role}}{{end}}',
+      submitForm(e) {
+        this.$el.submit();
+      }
+    }
+  }
+</script>
+
+{{end}}

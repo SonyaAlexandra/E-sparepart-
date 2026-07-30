@@ -1,0 +1,157 @@
+{{template "base" .}}
+{{define "content"}}
+
+<!-- Filter + Download bar -->
+<div class="mb-3">
+  <div class="p-1">
+    <form method="GET" action="/pengambilan/keluar" id="filter-form">
+      <div class="flex flex-wrap gap-3 items-end">
+
+        <!-- Filter Divisi -->
+        <div class="form-control">
+          <label class="label pb-1"><span class="label-text text-xs font-medium">Seksi</span></label>
+          <select name="divisi" class="select select-bordered select-sm w-36" onchange="this.form.submit()">
+            <option value="">Semua Seksi</option>
+            {{range .DivisiList}}
+            <option value="{{.}}" {{if eq . $.DivisiFilter}}selected{{end}}>{{.}}</option>
+            {{end}}
+          </select>
+        </div>
+
+        <div class="form-control">
+          <label class="label pb-1"><span class="label-text text-xs font-medium">Dari Tanggal</span></label>
+          <input type="date" name="from" value="{{.FromFilter}}" class="input input-bordered input-sm w-38" />
+        </div>
+
+        <div class="form-control">
+          <label class="label pb-1"><span class="label-text text-xs font-medium">Sampai Tanggal</span></label>
+          <input type="date" name="to" value="{{.ToFilter}}" class="input input-bordered input-sm w-38" />
+        </div>
+
+        <div class="flex gap-2 items-end pb-0.5">
+          <button type="submit" class="btn btn-sm text-white" style="background:#568C20;border-color:#568C20">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+            </svg>
+            Filter
+          </button>
+          {{if or .DivisiFilter .FromFilter .ToFilter}}
+          <a href="/pengambilan/keluar" class="btn btn-sm btn-ghost border">Reset</a>
+          {{end}}
+        </div>
+
+        <div class="flex-1"></div>
+
+        <div class="items-end pb-0.5">
+          <a id="excel-btn"
+            href="/pengambilan/keluar/excel?divisi={{.DivisiFilter}}&from={{.FromFilter}}&to={{.ToFilter}}"
+            class="btn btn-sm btn-outline" style="border-color:#217346;color:#217346">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Download Excel
+          </a>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Summary card -->
+<div class="card bg-white shadow-sm p-5 mb-5 border-l-4" style="border-color:#568C20">
+  <div class="flex flex-wrap gap-6 items-center">
+    <div>
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Item Keluar</p>
+      <p class="text-2xl font-bold text-gray-800 mt-1">{{len .Items}}</p>
+    </div>
+    <div>
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Total Nilai</p>
+      <p class="text-2xl font-bold mt-1" style="color:#568C20">{{formatRupiah .TotalValue}}</p>
+    </div>
+    {{if .DivisiFilter}}
+    <div>
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Divisi</p>
+      <p class="text-base font-semibold text-gray-700 mt-1">{{.DivisiFilter}}</p>
+    </div>
+    {{end}}
+  </div>
+</div>
+
+<!-- Table -->
+<div class="card bg-white shadow-sm overflow-hidden">
+  <div class="table-responsive">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>No WR/WO</th>
+          <th>Kode Oracle</th>
+          <th>Deskripsi</th>
+          <th>Divisi</th>
+          <th class="text-center">Qty</th>
+          <th class="text-right">Transaction Value</th>
+          <th>Transaction Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{if .Items}}
+        {{range $i, $it := .Items}}
+        <tr class="hover">
+          <td class="text-gray-400">{{add $i 1}}</td>
+          <td class="font-medium text-xs">{{$it.NoWRWO}}</td>
+          <td class="text-xs font-mono text-gray-500">{{$it.KodeOracle}}</td>
+          <td class="text-sm">{{if $it.NamaItem}}{{$it.NamaItem}}{{else}}<span class="text-gray-400 italic text-xs">(data tidak tersedia)</span>{{end}}</td>
+          <td><span class="badge badge-ghost badge-sm">{{$it.Division}}</span></td>
+          <td class="text-center font-bold">{{$it.Jumlah}}</td>
+          <td class="text-right text-sm">{{formatRupiah $it.TransactionValue}}</td>
+          <td class="text-sm text-gray-500">{{formatDate $it.SubmittedAt}}</td>
+        </tr>
+        {{end}}
+        {{else}}
+        <tr>
+          <td colspan="8" class="text-center py-12 text-gray-400">
+            Tidak ada data sparepart keluar
+            {{if .DivisiFilter}} untuk divisi <strong>{{.DivisiFilter}}</strong>{{end}}
+            {{if or .FromFilter .ToFilter}} pada periode yang dipilih{{end}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const form = document.getElementById('filter-form');
+    const excelBtn = document.getElementById('excel-btn');
+    if (!form || !excelBtn) return;
+
+    function syncExcelUrl() {
+      const divisi = form.querySelector('[name="divisi"]').value;
+      const from = form.querySelector('[name="from"]').value;
+      const to = form.querySelector('[name="to"]').value;
+
+      const params = new URLSearchParams();
+      if (divisi) params.set('divisi', divisi);
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+
+      excelBtn.href = '/pengambilan/keluar/excel?' + params.toString();
+    }
+
+    form.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('change', syncExcelUrl);
+      el.addEventListener('input', syncExcelUrl);
+    });
+
+    syncExcelUrl();
+  })();
+</script>
+
+{{end}}

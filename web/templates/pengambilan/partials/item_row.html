@@ -1,0 +1,10 @@
+{{with .Sparepart}}
+<div data-sparepart='{"sparepart_id":{{.ID}},"nama_item":"{{.NamaItem}}","kode_oracle":"{{.KodeOracle}}","no_baki":"","mesin_area":""}'>
+</div>
+<div class="alert alert-success py-2 text-sm">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+  </svg>
+  Ditambahkan: <strong>{{.NamaItem}}</strong>
+</div>
+{{end}}

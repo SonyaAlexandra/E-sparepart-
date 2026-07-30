@@ -1,0 +1,165 @@
+{{template "base" .}}
+{{define "content"}}
+
+{{with .Request}}
+<div class="max-w-2xl mx-auto space-y-6">
+
+  <!-- Status card -->
+  <div class="card bg-white shadow-sm">
+    <div class="card-body">
+      <div class="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-gray-800">{{.NoWRWO}}</h2>
+          <p class="text-gray-500 text-sm mt-1">
+            Diajukan oleh <strong>{{.RequesterName}}</strong> &bull; Divisi {{.Division}}
+          </p>
+          <p class="text-gray-400 text-xs mt-0.5">{{formatDateTime .SubmittedAt}}</p>
+        </div>
+        <span class="badge badge-lg {{statusClass .Status}}">{{statusLabel .Status}}</span>
+      </div>
+
+      {{if eq .Status "rejected"}}
+      <div class="alert alert-error mt-4 text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+          class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+        </svg>
+        <strong>Alasan Penolakan:</strong> {{.RejectionReason}}
+      </div>
+      {{end}}
+
+      {{if eq .Status "approved"}}
+      <div class="alert alert-success mt-4 text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+          class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+        Request telah <strong>disetujui penuh</strong>. Silakan ambil sparepart.
+        <a href="/struk/{{.ID}}/pdf" class="btn btn-xs btn-success ml-2 text-white">Download Struk PDF</a>
+      </div>
+      {{end}}
+    </div>
+  </div>
+
+  <!-- Progress tracker -->
+  <div class="card bg-white shadow-sm">
+    <div class="card-body">
+      <h3 class="font-semibold text-gray-700 mb-5">Progress Validasi</h3>
+
+      <div class="flex items-center justify-between relative">
+        <div class="absolute left-0 right-0 top-5 h-0.5 bg-gray-200 z-0 mx-8"></div>
+
+        <!-- Stage 1: Admin SP -->
+        {{$req := .}}
+        <div class="flex flex-col items-center z-10 flex-1">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm
+            {{if ge $req.CurrentStage 1}}text-white{{else}}bg-gray-200 text-gray-400{{end}}"
+            style="{{if ge $req.CurrentStage 1}}background:#568C20{{end}}">
+            {{if gt $req.CurrentStage 1}}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="white"
+              class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            {{else}}1{{end}}
+          </div>
+          <p class="text-xs font-medium mt-2 text-center">Admin SP</p>
+          {{range $.Validations}}{{if eq .Stage 1}}
+          <p class="text-xs text-gray-400 text-center">{{.ValidatorName}}</p>
+          <p class="text-xs text-gray-300 text-center">{{formatDate .ValidatedAt}}</p>
+          {{end}}{{end}}
+        </div>
+
+        <div class="h-0.5 flex-1 {{if ge $req.CurrentStage 2}}bg-green-400{{else}}bg-gray-200{{end}}"></div>
+
+        <!-- Stage 2: SPV Pemohon -->
+        <div class="flex flex-col items-center z-10 flex-1">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm
+            {{if ge $req.CurrentStage 2}}text-white{{else}}bg-gray-200 text-gray-400{{end}}"
+            style="{{if ge $req.CurrentStage 2}}background:#568C20{{end}}">
+            {{if gt $req.CurrentStage 2}}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="white"
+              class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            {{else}}2{{end}}
+          </div>
+          <p class="text-xs font-medium mt-2 text-center">SPV Pemohon</p>
+          {{range $.Validations}}{{if eq .Stage 2}}
+          <p class="text-xs text-gray-400 text-center">{{.ValidatorName}}</p>
+          <p class="text-xs text-gray-300 text-center">{{formatDate .ValidatedAt}}</p>
+          {{end}}{{end}}
+        </div>
+
+        <div class="h-0.5 flex-1 {{if ge $req.CurrentStage 3}}bg-green-400{{else}}bg-gray-200{{end}}"></div>
+
+        <!-- Stage 3: SPV SP -->
+        <div class="flex flex-col items-center z-10 flex-1">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm
+            {{if eq $req.Status " approved"}}text-white{{else if eq $req.CurrentStage 3}}bg-yellow-400
+            text-white{{else}}bg-gray-200 text-gray-400{{end}}" {{if eq $req.Status "approved"
+            }}style="background:#568C20" {{end}}>
+            {{if eq $req.Status "approved"}}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="white"
+              class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            {{else}}3{{end}}
+          </div>
+          <p class="text-xs font-medium mt-2 text-center">SPV SP</p>
+          {{range $.Validations}}{{if eq .Stage 3}}
+          <p class="text-xs text-gray-400 text-center">{{.ValidatorName}}</p>
+          <p class="text-xs text-gray-300 text-center">{{formatDate .ValidatedAt}}</p>
+          {{end}}{{end}}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Item list -->
+  <div class="card bg-white shadow-sm">
+    <div class="card-body p-0">
+      <div class="px-5 py-4 border-b">
+        <h3 class="font-semibold text-gray-700">Item yang Diminta</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>No Baki</th>
+              <th>Nama Part</th>
+              <th>Deskripsi</th>
+              <th>Mesin/Area</th>
+              <th class="text-center">Jumlah</th>
+              <th class="text-center">Disetujui</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{range $i, $item := .Items}}
+            <tr>
+              <td>{{add $i 1}}</td>
+              <td>{{$item.NoBaki}}</td>
+              <td class="font-medium">{{if $item.NamaItem}}{{$item.NamaItem}}{{else}}<span class="text-gray-400 italic text-xs">(data tidak tersedia)</span>{{end}}</td>
+              <td class="text-xs text-gray-500">{{$item.Deskripsi}}</td>
+              <td>{{$item.MesinArea}}</td>
+              <td class="text-center">{{$item.Jumlah}}</td>
+              <td class="text-center">
+                {{if $item.JumlahDisetujui}}
+                <span class="font-bold text-green-600">{{$item.JumlahDisetujui}}</span>
+                {{else}}
+                <span class="text-gray-300">-</span>
+                {{end}}
+              </td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{{end}}
+{{end}}

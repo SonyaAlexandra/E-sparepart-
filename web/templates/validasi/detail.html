@@ -1,0 +1,457 @@
+{{template "base" .}}
+{{define "content"}}
+
+{{with .Request}}
+<div class="max-w-4xl mx-auto space-y-5">
+{{if $.Error}}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.showToast) showToast('{{$.Error}}', 'error', 7000);
+  });
+</script>
+{{end}}
+
+  <!-- Header card -->
+  <div class="card bg-white shadow-sm">
+    <div class="card-body">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-gray-800">{{.NoWRWO}}</h2>
+          <div class="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
+            <span><span class="text-gray-400">Pemohon:</span> <strong>{{.RequesterName}}</strong></span>
+            <span><span class="text-gray-400">Divisi:</span> <strong>{{.Division}}</strong></span>
+            <span><span class="text-gray-400">Tanggal:</span> {{formatDateTime .SubmittedAt}}</span>
+          </div>
+        </div>
+        <span class="badge badge-lg {{statusClass .Status}}">{{statusLabel .Status}}</span>
+      </div>
+
+      <!-- Progress tracker -->
+      <div class="flex items-center gap-2 mt-4">
+        <div class="flex items-center gap-1">
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
+            {{if ge .CurrentStage 1}}text-white{{else}}bg-gray-200 text-gray-400{{end}}"
+            style="{{if ge .CurrentStage 1}}background:#568C20{{end}}">
+            {{if gt .CurrentStage 1}}✓{{else}}1{{end}}
+          </div>
+          <span class="text-xs text-gray-500">Admin SP</span>
+        </div>
+        <div class="h-px flex-1 {{if ge .CurrentStage 2}}bg-green-400{{else}}bg-gray-200{{end}}"></div>
+        <div class="flex items-center gap-1">
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
+            {{if ge .CurrentStage 2}}text-white{{else}}bg-gray-200 text-gray-400{{end}}"
+            style="{{if ge .CurrentStage 2}}background:#568C20{{end}}">
+            {{if gt .CurrentStage 2}}✓{{else}}2{{end}}
+          </div>
+          <span class="text-xs text-gray-500">SPV Pemohon</span>
+        </div>
+        <div class="h-px flex-1 {{if ge .CurrentStage 3}}bg-green-400{{else}}bg-gray-200{{end}}"></div>
+        <div class="flex items-center gap-1">
+          {{$stage3Class := "bg-gray-200 text-gray-400"}}
+          {{if eq $.Request.Status "approved"}}{{$stage3Class = "text-white"}}{{else if eq .CurrentStage 3}}{{$stage3Class = "bg-yellow-400 text-white"}}{{end}}
+          {{$stage3Style := ""}}
+          {{if eq $.Request.Status "approved"}}{{$stage3Style = "background:#568C20"}}{{end}}
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold {{$stage3Class}}"
+            style="{{$stage3Style}}">
+            {{if eq $.Request.Status "approved"}}✓{{else}}3{{end}}
+          </div>
+          <span class="text-xs text-gray-500">SPV SP</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Items table — tampilan saja, tidak ada editor inline -->
+  <div class="card bg-white shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <h3 class="font-semibold text-gray-700">Item Sparepart yang Diminta</h3>
+      <div class="flex items-center gap-3">
+        {{if eq .Status "approved"}}
+        <span class="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+          </svg>
+          Sudah disetujui semua tahap — tidak dapat diedit
+        </span>
+        {{end}}
+        <span class="text-sm text-gray-400">{{len .Items}} item</span>
+      </div>
+    </div>
+
+    <!-- Form approve — data qty dikirim dari sini saat klik Approved -->
+    <form id="approve-form" method="POST" action="/validasi/{{.ID}}/approve">
+      <!-- Hidden inputs diisi oleh JS setelah user edit di modal -->
+      <div id="approve-hidden-inputs">
+        {{range .Items}}
+        <input type="hidden" name="item_id[]" value="{{.ID}}" />
+        <input type="hidden" name="jumlah_disetujui[]" id="hidden-qty-{{.ID}}"
+          value="{{if .JumlahDisetujui}}{{.JumlahDisetujui}}{{else}}{{.Jumlah}}{{end}}" />
+        {{end}}
+      </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Nama Part</th>
+            <th>Deskripsi</th>
+            <th>Lokasi</th>
+            <th class="text-center">Jumlah Diminta</th>
+            <th class="text-center">Jumlah Disetujui</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $i, $item := .Items}}
+          <tr id="item-row-{{$item.ID}}">
+            <td class="text-gray-400">{{add $i 1}}</td>
+            <td class="font-medium text-sm">{{$item.NamaItem}}</td>
+            <td class="text-xs text-gray-500">{{$item.Deskripsi}}</td>
+            <td class="text-sm">{{if $item.NoBaki}}{{$item.NoBaki}}{{else}}{{$item.MesinArea}}{{end}}</td>
+            <td class="text-center font-bold">{{$item.Jumlah}}</td>
+            <td class="text-center">
+              <span id="display-qty-{{$item.ID}}" class="font-bold text-sm px-2 py-0.5 rounded bg-gray-50 border border-gray-200">
+                {{if $item.JumlahDisetujui}}{{$item.JumlahDisetujui}}{{else}}{{$item.Jumlah}}{{end}}
+              </span>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Riwayat Validasi -->
+  {{if $.Validations}}
+  <div class="card bg-white shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b">
+      <h3 class="font-semibold text-gray-700">Riwayat Validasi</h3>
+    </div>
+    <div class="divide-y">
+      {{range $.Validations}}
+      {{$badgeClass := "badge-error"}}
+      {{if eq .Action "approved"}}{{$badgeClass = "badge-success"}}{{end}}
+      <div class="px-5 py-3 flex items-center justify-between">
+        <div>
+          <span class="badge badge-sm {{$badgeClass}} mr-2">Stage {{.Stage}}</span>
+          <span class="font-medium text-sm">{{.ValidatorName}}</span>
+          {{if .Reason}}<span class="text-sm text-gray-500 ml-2">— {{.Reason}}</span>{{end}}
+        </div>
+        <span class="text-xs text-gray-400">{{formatDateTime .ValidatedAt}}</span>
+      </div>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+
+  <!-- Action buttons -->
+  {{if and (ne .Status "approved") (ne .Status "rejected")}}
+  <div class="card bg-white shadow-sm">
+    <div class="card-body">
+      <h3 class="font-semibold text-gray-700 mb-4">Tindakan Validasi</h3>
+      <div class="flex flex-wrap gap-3">
+
+        <!-- Approved -->
+        <button type="submit" form="approve-form" id="btn-approve"
+          class="btn text-white flex-1 sm:flex-none"
+          style="background:#568C20;border-color:#568C20"
+          onclick="
+            this.disabled = true;
+            this.innerHTML = '<span class=\'loading loading-spinner loading-xs\'></span> Menyetujui...';
+            document.getElementById('approve-form').submit();
+          ">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+            stroke="currentColor" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+          Approved
+        </button>
+
+        <!-- Reject -->
+        <button type="button" class="btn btn-error btn-outline flex-1 sm:flex-none"
+                  style="border-color:#eb2525;color:#c61f1f"
+          onmouseover="this.style.backgroundColor='#fee2e2'"
+          onmouseout="this.style.backgroundColor='transparent'"
+          onclick="openRejectModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+            stroke="currentColor" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+          Reject
+        </button>
+
+        <button type="button" class="btn btn-outline flex-1 sm:flex-none"
+          style="border-color:#2563eb;color:#2563eb"
+          onmouseover="this.style.backgroundColor='#dbeafe';this.style.color='#2563eb'"
+          onmouseout="this.style.backgroundColor='transparent';this.style.color='#2563eb'"
+          onclick="openReviseModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+            stroke="currentColor" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+          </svg>
+          Revise
+        </button>
+
+        <a href="/validasi" class="btn btn-ghost flex-1 sm:flex-none">Kembali</a>
+      </div>
+    </div>
+  </div>
+  {{else}}
+  <div class="flex gap-3">
+    {{if eq .Status "approved"}}
+    <a href="/struk/{{.ID}}/pdf" class="btn text-white" style="background:#568C20;border-color:#568C20">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+        class="w-4 h-4">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+      </svg>
+      Download Struk PDF
+    </a>
+    {{end}}
+    <a href="/validasi" class="btn btn-ghost">Kembali</a>
+  </div>
+  {{end}}
+
+</div>
+{{end}}
+
+<dialog id="revise-modal" class="modal">
+  <div class="modal-box max-w-2xl w-full">
+
+    <!-- Header modal -->
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-bold text-lg">Revise Jumlah</h3>
+        <p class="text-sm text-gray-500 mt-0.5">Ubah jumlah yang disetujui atau hapus item dari request ini.</p>
+      </div>
+      <button type="button" onclick="closeReviseModal()"
+        class="btn btn-sm btn-ghost btn-circle text-gray-400">✕</button>
+    </div>
+
+    <!-- Tabel editor di dalam modal -->
+    <div class="overflow-x-auto rounded-lg border border-base-200 mb-5">
+      <table class="table table-sm">
+        <thead class="bg-base-200/60">
+          <tr>
+            <th>Nama Part</th>
+            <th class="text-center">Diminta</th>
+            <th class="text-center">Disetujui</th>
+            <th class="text-center">Stok</th>
+            {{if gt (len $.Request.Items) 1}}
+            <th class="text-center">Hapus</th>
+            {{end}}
+          </tr>
+        </thead>
+        <tbody id="revise-table-body">
+          {{range $.Request.Items}}
+          <tr id="revise-row-{{.ID}}" class="revise-row">
+            <td class="font-medium text-sm">{{.NamaItem}}</td>
+            <td class="text-center font-bold">{{.Jumlah}}</td>
+            <td class="text-center">
+              <div class="flex items-center justify-center gap-1"
+                x-data="{
+                  qty: {{if .JumlahDisetujui}}{{.JumlahDisetujui}}{{else}}{{.Jumlah}}{{end}},
+                  maxStok: {{.Jumlah}},
+                  itemID: {{.ID}}
+                }"
+                x-init="
+                  fetch('/api/sparepart/oracle?kode=' + encodeURIComponent('{{.KodeOracle}}'))
+                    .then(r => r.ok ? r.json() : null)
+                    .then(d => {
+                      if(d && d.stok !== undefined) {
+                        maxStok = d.stok;
+                        document.getElementById('stok-label-{{.ID}}').textContent = d.stok + ' pcs';
+                      }
+                    })
+                    .catch(()=>{});
+                  // sync ke hidden input saat qty berubah
+                  $watch('qty', val => {
+                    var h = document.getElementById('hidden-qty-' + itemID);
+                    var d = document.getElementById('display-qty-' + itemID);
+                    if(h) h.value = val;
+                    if(d) d.textContent = val;
+                  });
+                ">
+                <button type="button" class="btn btn-xs btn-ghost border border-gray-200"
+                  @click="if(qty>1) qty--">−</button>
+                <input type="number"
+                  x-model.number="qty"
+                  min="1"
+                  class="input input-bordered input-xs w-14 text-center font-bold"
+                  @change="
+                    if(qty < 1) { qty = 1; return; }
+                    if(qty > maxStok) {
+                      if(window.showToast) showToast('Stok tidak mencukupi. Stok tersedia hanya ' + maxStok + ' pcs.', 'error');
+                      qty = maxStok;
+                    }
+                    var h = document.getElementById('hidden-qty-' + itemID);
+                    var d = document.getElementById('display-qty-' + itemID);
+                    if(h) h.value = qty;
+                    if(d) d.textContent = qty;
+                  " />
+                <button type="button" class="btn btn-xs btn-ghost border border-gray-200"
+                  @click="
+                    if(qty >= maxStok) {
+                      if(window.showToast) showToast('Stok tidak mencukupi. Stok tersedia hanya ' + maxStok + ' pcs.', 'error');
+                    } else { qty++; }
+                  ">+</button>
+              </div>
+            </td>
+            <td class="text-center">
+              <span id="stok-label-{{.ID}}" class="text-xs text-gray-400">— pcs</span>
+            </td>
+            {{if gt (len $.Request.Items) 1}}
+            <td class="text-center">
+              <button type="button" class="btn btn-xs btn-error btn-outline"
+                title="Hapus item ini"
+                onclick="confirmDeleteItem({{.ID}}, '{{.NamaItem}}')">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                  stroke="currentColor" class="w-3 h-3">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+              </button>
+            </td>
+            {{end}}
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer modal -->
+    <div class="flex justify-end gap-2">
+      <button type="button" class="btn btn-ghost" onclick="closeReviseModal()">Tutup</button>
+      <button type="button" class="btn text-white" style="background:#2563eb;border-color:#2563eb"
+        onmouseover="this.style.backgroundColor='#3b82f6'"
+        onmouseout="this.style.backgroundColor='#2563eb'"
+        onclick="closeReviseModal(); if(window.showToast) showToast('Revisi tersimpan. Klik Approved untuk mengkonfirmasi.', 'info', 4000);">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+          stroke="currentColor" class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+        Simpan Revisi
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Modal Reject -->
+<dialog id="reject-modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-1">Reject Request</h3>
+    <p class="text-sm text-gray-500 mb-4">Masukkan alasan penolakan. Tindakan ini tidak dapat dibatalkan.</p>
+    <form id="reject-form" method="POST" action="/validasi/{{.Request.ID}}/reject"
+      onsubmit="return validateRejectForm()">
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-medium">Alasan Penolakan <span class="text-error">*</span></span>
+        </label>
+        <textarea id="reject-reason" name="reason" rows="3" placeholder="Tuliskan alasan penolakan..."
+          class="textarea textarea-bordered w-full"></textarea>
+        <p id="reject-reason-error" class="text-error text-xs mt-1 hidden">Alasan penolakan wajib diisi.</p>
+      </div>
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost" onclick="closeRejectModal()">Batal</button>
+        <button type="submit" class="btn btn-error text-white">Reject</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- Modal Konfirmasi Hapus Item -->
+<dialog id="delete-item-modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg text-error">Hapus Item?</h3>
+    <p class="py-3">Hapus <strong id="delete-item-name"></strong> dari request ini?</p>
+    <p class="text-sm text-gray-500 mb-2">Tindakan ini tidak dapat dibatalkan.</p>
+    <div class="modal-action">
+      <form method="dialog"><button class="btn btn-ghost">Batal</button></form>
+      <button id="delete-item-confirm" class="btn btn-error text-white">Ya, Hapus</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  // ── Revise modal ──────────────────────────────────────────────────────────
+  function openReviseModal() {
+    document.getElementById('revise-modal').showModal();
+  }
+  function closeReviseModal() {
+    document.getElementById('revise-modal').close();
+  }
+
+  // ── Reject modal ──────────────────────────────────────────────────────────
+  function openRejectModal() {
+    var ta = document.getElementById('reject-reason');
+    if (ta) ta.value = '';
+    var err = document.getElementById('reject-reason-error');
+    if (err) err.classList.add('hidden');
+    document.getElementById('reject-modal').showModal();
+  }
+  function closeRejectModal() {
+    document.getElementById('reject-modal').close();
+    var ta = document.getElementById('reject-reason');
+    if (ta) ta.value = '';
+    var err = document.getElementById('reject-reason-error');
+    if (err) err.classList.add('hidden');
+  }
+  function validateRejectForm() {
+    var ta = document.getElementById('reject-reason');
+    var err = document.getElementById('reject-reason-error');
+    if (!ta || ta.value.trim() === '') {
+      if (err) err.classList.remove('hidden');
+      if (ta) ta.focus();
+      return false;
+    }
+    return true;
+  }
+  document.getElementById('reject-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeRejectModal();
+  });
+
+  // ── Hapus item ────────────────────────────────────────────────────────────
+  function confirmDeleteItem(itemID, itemName) {
+    document.getElementById('delete-item-name').textContent = itemName;
+    const modal = document.getElementById('delete-item-modal');
+    const btn = document.getElementById('delete-item-confirm');
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    newBtn.addEventListener('click', function () {
+      modal.close();
+      fetch('/validasi/item/' + itemID, { method: 'DELETE' })
+        .then(function (res) {
+          if (res.ok) {
+            // Hapus dari tabel utama
+            var mainRow = document.getElementById('item-row-' + itemID);
+            if (mainRow) {
+              mainRow.style.transition = 'opacity 0.3s';
+              mainRow.style.opacity = '0';
+              setTimeout(function () { mainRow.remove(); }, 300);
+            }
+            // Hapus dari tabel modal revise
+            var reviseRow = document.getElementById('revise-row-' + itemID);
+            if (reviseRow) reviseRow.remove();
+            // Hapus hidden input
+            var hiddenQty = document.getElementById('hidden-qty-' + itemID);
+            if (hiddenQty) hiddenQty.remove();
+
+            if (window.showToast) showToast('Item berhasil dihapus dari request', 'success');
+          } else {
+            if (window.showToast) showToast('Gagal menghapus item', 'error');
+          }
+        })
+        .catch(function () {
+          if (window.showToast) showToast('Gagal menghapus item', 'error');
+        });
+    });
+    modal.showModal();
+  }
+</script>
+
+{{end}}

@@ -1,0 +1,249 @@
+{{template "base" .}}
+{{define "content"}}
+
+<!-- Filter bar -->
+<form method="GET" action="/log" class="flex flex-wrap gap-3 mb-5 items-end">
+  <div class="form-control">
+    <label class="label pb-1"><span class="label-text text-sm font-medium">Filter by Entity</span></label>
+    <select name="entity" class="select select-bordered select-sm" onchange="this.form.submit()">
+      <option value="">Semua Aktivitas</option>
+      <option value="request_order" {{if eq .EntityFilter "request_order" }}selected{{end}}>Request Order</option>
+      <option value="request" {{if eq .EntityFilter "request" }}selected{{end}}>Request Pengambilan</option>
+      <option value="validation" {{if eq .EntityFilter "validation" }}selected{{end}}>Validasi Request</option>
+      <option value="non_inventory" {{if eq .EntityFilter "non_inventory" }}selected{{end}}>Non-Inventory</option>
+      <option value="sparepart" {{if eq .EntityFilter "sparepart" }}selected{{end}}>Katalog Sparepart</option>
+      <option value="penerimaan" {{if eq .EntityFilter "penerimaan" }}selected{{end}}>Penerimaan Stok</option>
+      <option value="user" {{if eq .EntityFilter "user" }}selected{{end}}>User</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn-sm text-white" style="background:#568C20;border-color:#568C20">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      class="w-4 h-4">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+    </svg>
+    Filter
+  </button>
+  {{if .EntityFilter}}
+  <a href="/log" class="btn btn-sm text-white" style="background:#568C20;border-color:#568C20">Reset</a>
+  {{end}}
+</form>
+
+<div class="card bg-white shadow-sm overflow-hidden">
+  <div class="table-responsive">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>Waktu</th>
+          <th>User</th>
+          <th>Aksi</th>
+          <th>Entity</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{if .Logs}}
+        {{range .Logs}}
+        <tr class="hover">
+          <td class="text-xs text-gray-400 whitespace-nowrap">{{formatDateTime .CreatedAt}}</td>
+          <td class="font-medium text-sm">{{.UserFullName}}</td>
+
+          {{/* ════════════════════════════════════════
+               ACTION BADGE
+               ════════════════════════════════════════ */}}
+          <td>
+            {{$action := .Action}}
+
+            {{/* ── Grup 1: Alur Request & Approval (Biru & Hijau) ── */}}
+            {{if eq $action "submit_request"}}
+            <span style="background:rgba(59,130,246,0.08);color:#3b82f6;border:1px solid rgba(59,130,246,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#3b82f6" class="w-1.5 h-1.5 rounded-full"></span>Ajukan Permintaan</span>
+
+            {{else if eq $action "create"}}
+            <span style="background:rgba(59,130,246,0.08);color:#3b82f6;border:1px solid rgba(59,130,246,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#3b82f6" class="w-1.5 h-1.5 rounded-full"></span>Buat Permintaan</span>
+
+            {{else if eq $action "approve_stage1"}}
+            <span style="background:rgba(5,150,105,0.08);color:#059669;border:1px solid rgba(5,150,105,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#059669" class="w-1.5 h-1.5 rounded-full"></span>Setujui Tahap 1</span>
+
+            {{else if eq $action "approve_stage2"}}
+            <span style="background:rgba(5,150,105,0.08);color:#059669;border:1px solid rgba(5,150,105,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#059669" class="w-1.5 h-1.5 rounded-full"></span>Setujui Tahap 2</span>
+
+            {{else if eq $action "approve"}}
+            <span style="background:rgba(5,150,105,0.08);color:#059669;border:1px solid rgba(5,150,105,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#059669" class="w-1.5 h-1.5 rounded-full"></span>Disetujui</span>
+
+            {{else if eq $action "approve_final"}}
+            <span style="background:rgba(22,163,74,0.08);color:#16a34a;border:1px solid rgba(22,163,74,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#16a34a" class="w-1.5 h-1.5 rounded-full"></span>Persetujuan Final</span>
+
+            {{/* ── Grup 2: Manajemen Pengguna & Karyawan (Indigo) ── */}}
+            {{else if eq $action "create_user"}}
+            <span style="background:rgba(79,70,229,0.08);color:#4f46e5;border:1px solid rgba(79,70,229,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#4f46e5" class="w-1.5 h-1.5 rounded-full"></span>Tambah Pengguna</span>
+
+            {{else if eq $action "create_employee"}}
+            <span style="background:rgba(79,70,229,0.08);color:#4f46e5;border:1px solid rgba(79,70,229,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#4f46e5" class="w-1.5 h-1.5 rounded-full"></span>Tambah Karyawan</span>
+
+            {{else if eq $action "update_user"}}
+            <span style="background:rgba(129,140,248,0.08);color:#818cf8;border:1px solid rgba(129,140,248,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#818cf8" class="w-1.5 h-1.5 rounded-full"></span>Edit Pengguna</span>
+
+            {{else if eq $action "update_employee"}}
+            <span style="background:rgba(129,140,248,0.08);color:#818cf8;border:1px solid rgba(129,140,248,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#818cf8" class="w-1.5 h-1.5 rounded-full"></span>Edit Karyawan</span>
+
+            {{/* ── Grup 3: Inventaris / Barang (Purple & Cyan) ── */}}
+            {{else if eq $action "create_sparepart"}}
+            <span style="background:rgba(147,51,234,0.08);color:#9333ea;border:1px solid rgba(147,51,234,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#9333ea" class="w-1.5 h-1.5 rounded-full"></span>Tambah Sparepart</span>
+
+            {{else if eq $action "update_sparepart"}}
+            <span style="background:rgba(192,132,252,0.08);color:#c084fc;border:1px solid rgba(192,132,252,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#c084fc" class="w-1.5 h-1.5 rounded-full"></span>Edit Sparepart</span>
+
+            {{else if eq $action "stock_receiving"}}
+            <span style="background:rgba(8,145,178,0.08);color:#0891b2;border:1px solid rgba(8,145,178,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#0891b2" class="w-1.5 h-1.5 rounded-full"></span>Penerimaan Stok</span>
+
+            {{else if eq $action "penerimaan"}}
+            <span style="background:rgba(8,145,178,0.08);color:#0891b2;border:1px solid rgba(8,145,178,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#0891b2" class="w-1.5 h-1.5 rounded-full"></span>Penerimaan</span>
+
+            {{/* ── Grup 4: Purchasing / Request Order (Amber & Orange) ── */}}
+            {{else if eq $action "create_request_order"}}
+            <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full"></span>Buat Request Order</span>
+
+            {{else if eq $action "complete_request_order"}}
+            <span style="background:rgba(234,88,12,0.08);color:#ea580c;border:1px solid rgba(234,88,12,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#ea580c" class="w-1.5 h-1.5 rounded-full"></span>Selesaikan Request Order</span>
+
+            {{/* ── Grup 5: Pembatalan, Penolakan & Penghapusan (Merah) ── */}}
+            {{else if eq $action "reject_request"}}
+            <span style="background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#ef4444" class="w-1.5 h-1.5 rounded-full"></span>Tolak Permintaan</span>
+
+            {{else if eq $action "cancel"}}
+            <span style="background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#ef4444" class="w-1.5 h-1.5 rounded-full"></span>Dibatalkan</span>
+
+            {{else if eq $action "delete_user"}}
+            <span style="background:rgba(225,29,72,0.08);color:#e11d48;border:1px solid rgba(225,29,72,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#e11d48" class="w-1.5 h-1.5 rounded-full"></span>Hapus Pengguna</span>
+
+            {{else if eq $action "delete_employee"}}
+            <span style="background:rgba(225,29,72,0.08);color:#e11d48;border:1px solid rgba(225,29,72,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#e11d48" class="w-1.5 h-1.5 rounded-full"></span>Hapus Karyawan</span>
+
+            {{else if eq $action "delete_sparepart"}}
+            <span style="background:rgba(225,29,72,0.08);color:#e11d48;border:1px solid rgba(225,29,72,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#e11d48" class="w-1.5 h-1.5 rounded-full"></span>Hapus Sparepart</span>
+
+            {{else}}
+            <span class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-500">
+              {{$action}}</span>
+            {{end}}
+          </td>
+
+          {{/* ════════════════════════════════════════
+               ENTITY TYPE BADGE
+               ════════════════════════════════════════ */}}
+          <td>
+            {{$et := .EntityType}}
+
+            {{/* Grup 1: Request & Validasi */}}
+            {{if eq $et "request"}}
+            <span style="background:rgba(59,130,246,0.08);color:#3b82f6;border:1px solid rgba(59,130,246,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#3b82f6" class="w-1.5 h-1.5 rounded-full"></span>Request</span>
+
+            {{else if eq $et "validation"}}
+            <span style="background:rgba(5,150,105,0.08);color:#059669;border:1px solid rgba(5,150,105,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#059669" class="w-1.5 h-1.5 rounded-full"></span>Validasi</span>
+
+            {{/* Grup 2: Pengguna */}}
+            {{else if eq $et "user"}}
+            <span style="background:rgba(79,70,229,0.08);color:#4f46e5;border:1px solid rgba(79,70,229,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#4f46e5" class="w-1.5 h-1.5 rounded-full"></span>Pengguna</span>
+
+            {{/* Grup 3: Inventaris */}}
+            {{else if eq $et "sparepart"}}
+            <span style="background:rgba(147,51,234,0.08);color:#9333ea;border:1px solid rgba(147,51,234,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#9333ea" class="w-1.5 h-1.5 rounded-full"></span>Sparepart</span>
+
+            {{else if eq $et "penerimaan"}}
+            <span style="background:rgba(8,145,178,0.08);color:#0891b2;border:1px solid rgba(8,145,178,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#0891b2" class="w-1.5 h-1.5 rounded-full"></span>Penerimaan</span>
+
+            {{/* Grup 4: Purchasing */}}
+            {{else if eq $et "request_order"}}
+            <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full"></span>Request Order</span>
+
+            {{else if eq $et "non_inventory"}}
+            <span style="background:rgba(202,138,4,0.08);color:#ca8a04;border:1px solid rgba(202,138,4,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#ca8a04" class="w-1.5 h-1.5 rounded-full"></span>Non-Inventory</span>
+
+            {{else}}
+            <span class="text-xs text-gray-400">{{if .EntityType}}{{.EntityType}} #{{.EntityID}}{{end}}</span>
+            {{end}}
+          </td>
+
+          <td class="text-sm text-gray-600 max-w-xs truncate">{{.Detail}}</td>
+        </tr>
+        {{end}}
+        {{else}}
+        <tr>
+          <td colspan="5" class="py-16 text-center">
+            <div class="flex flex-col items-center gap-3 text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-10 h-10 opacity-40">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+              </svg>
+              <p class="text-sm font-medium">
+                {{if .EntityFilter}}Tidak ada log untuk kategori ini{{else}}Belum ada log aktivitas{{end}}
+              </p>
+              {{if .EntityFilter}}
+              <a href="/log" class="text-xs underline">Lihat semua log</a>
+              {{end}}
+            </div>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}

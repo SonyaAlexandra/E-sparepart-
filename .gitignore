@@ -1,0 +1,31 @@
+
+/bin/
+*.exe
+
+.env
+*.env
+
+web/static/css/app.css
+web/static/js/app.js
+
+assets/node_modules/
+assets/package-lock.json
+
+.vscode/
+.idea/
+*.swp
+
+.env
+
+.DS_Store
+**/.DS_Store
+
+# Binary executables without extension
+main
+migrate
+
+# Archive files
+*.zip
+
+# VS Code workspace files
+*.code-workspace

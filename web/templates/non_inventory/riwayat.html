@@ -1,0 +1,182 @@
+{{define "content"}}
+<style>
+  .toggle-custom:checked {
+    background-color: #568C20 !important;
+    border-color: #568C20 !important;
+  }
+</style>
+
+  <!-- Filter Card -->
+<div class="mb-3">
+  <div class="p-1">
+      <form method="GET" action="/non-inventory/riwayat" class="flex flex-wrap gap-3 items-end">
+         <div class="form-control">
+          <label class="label py-0.5"><span class="label-text text-xs font-medium">Seksi</span></label>
+          <select name="divisi" class="select select-bordered select-sm" onchange="this.form.submit()">
+            <option value="Semua" {{if eq .Filter.Divisi "Semua"}}selected{{end}}>Semua Seksi</option>
+            <option value="MTC1" {{if eq .Filter.Divisi "MTC1"}}selected{{end}}>MTC 1</option>
+            <option value="MTC2" {{if eq .Filter.Divisi "MTC2"}}selected{{end}}>MTC 2</option>
+            <option value="UTL"  {{if eq .Filter.Divisi "UTL"}}selected{{end}}>UTL</option>
+            <option value="BM"   {{if eq .Filter.Divisi "BM"}}selected{{end}}>BM</option>
+          </select>
+        </div>
+        <div class="form-control">
+          <label class="label py-0.5"><span class="label-text text-xs font-medium">Dari Tanggal</span></label>
+          <input type="date" name="date_from" class="input input-bordered input-sm"
+                 value="{{.Filter.DateFrom}}"/>
+        </div>
+        <div class="form-control">
+          <label class="label py-0.5"><span class="label-text text-xs font-medium">Sampai Tanggal</span></label>
+          <input type="date" name="date_to" class="input input-bordered input-sm"
+                 value="{{.Filter.DateTo}}"/>
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
+            Filter
+          </button>
+          <a href="/non-inventory/riwayat" class="btn btn-ghost btn-sm">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card bg-white shadow-sm overflow-hidden">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>No. BPJT</th>
+            <th>Nama Pemohon</th>
+            <th>Seksi</th>
+            <th>Tgl Pemakaian</th>
+            <th>Tgl Pengajuan</th>
+            <th>Approval</th>
+            <th>Status</th>
+            <th class="text-center">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{if .Requests}}
+            {{range .Requests}}
+            <tr class="hover">
+              <td class="font-mono text-sm font-medium">{{.NoBPJT}}</td>
+              <td>{{.NamaPemohon}}</td>
+              <td><span class="badge badge-ghost badge-sm">{{.SeksiDivisi}}</span></td>
+              <td class="text-sm text-gray-500">{{formatDate .TanggalPemakaian}}</td>
+              <td class="text-sm text-gray-500">{{formatDate .SubmittedAt}}</td>
+              <td>
+                {{if eq .Status "approved"}}
+                <span style="background:rgba(86,140,32,0.1);color:#568C20;border:1px solid rgba(86,140,32,0.25)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+                  <span style="background:#568C20" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Disetujui
+                </span>
+                {{else if eq .Status "cancelled"}}
+                <span style="background:rgba(220,38,38,0.08);color:#dc2626;border:1px solid rgba(220,38,38,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+                  <span style="background:#dc2626" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Dibatalkan
+                </span>
+                {{else if eq .Status "pending"}}
+                <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+                  <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Tahap 1 - SPV Pemohon
+                </span>
+                {{else if eq .Status "stage1"}}
+                <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+                  <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Tahap 2 - Admin SP
+                </span>
+                {{else if eq .Status "stage2"}}
+                <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+                  <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Tahap 3 - SPV SP
+                </span>
+                {{else}}
+                <span style="background:rgba(107,114,128,0.08);color:#6b7280;border:1px solid rgba(107,114,128,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+                  <span style="background:#6b7280" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>{{.Status}}
+                </span>
+                {{end}}
+              </td>
+              <td>
+                {{if ne .Status "cancelled"}}
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" class="toggle toggle-custom toggle-sm" {{if .IsDone}}checked{{end}} onchange="toggleDone(this, {{.ID}})" />
+                  <span class="text-xs font-semibold done-label-{{.ID}}" style="color: {{if .IsDone}}#568C20{{else}}#9ca3af{{end}}">
+                    {{if .IsDone}}Selesai{{else}}Belum{{end}}
+                  </span>
+                </div>
+                {{else}}
+                <span class="text-xs text-base-content/30">-</span>
+                {{end}}
+              </td>
+              <td class="text-center">
+                <div class="flex gap-1 justify-center">
+                  <a href="/non-inventory/detail/{{.ID}}" class="btn btn-xs btn-ghost border">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 mr-0.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
+                    Lihat
+                  </a>
+                  {{if eq .Status "approved"}}
+                  <a href="/non-inventory/{{.ID}}/pdf" target="_blank" class="btn btn-xs text-white" style="background:#568C20;border-color:#568C20" title="Download PDF">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 mr-0.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                    </svg>
+                    PDF
+                  </a>
+                  {{end}}
+                </div>
+              </td>
+            </tr>
+            {{end}}
+          {{else}}
+            <tr>
+              <td colspan="8">
+                <div class="flex flex-col items-center justify-center py-14 text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 mb-3 opacity-40">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                  <p class="font-medium text-sm">Tidak ada data riwayat</p>
+                  <p class="text-xs mt-1">Coba ubah filter pencarian.</p>
+                </div>
+              </td>
+            </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+function toggleDone(el, id) {
+  const isChecked = el.checked;
+  const label = document.querySelector(`.done-label-${id}`);
+  
+  if (label) {
+    label.innerText = isChecked ? 'Selesai' : 'Belum';
+    label.style.color = isChecked ? '#568C20' : '#9ca3af';
+  }
+
+  fetch(`/non-inventory/${id}/toggle-done`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ is_done: isChecked })
+  })
+  .then(res => {
+    if (!res.ok) throw new Error();
+    showToast('Status diperbarui', 'success');
+  })
+  .catch(() => {
+    showToast('Gagal mengubah status', 'error');
+    // revert
+    el.checked = !isChecked;
+    if (label) {
+      label.innerText = !isChecked ? 'Selesai' : 'Belum';
+      label.style.color = !isChecked ? '#568C20' : '#9ca3af';
+    }
+  });
+}
+</script>
+{{end}}
+{{template "base" .}}

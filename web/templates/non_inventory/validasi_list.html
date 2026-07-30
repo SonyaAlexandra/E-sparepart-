@@ -1,0 +1,53 @@
+{{define "content"}}
+
+  <div>
+    <p class="text-sm text-gray-500 mt-0.5">{{.StageLabel}}</p>
+  </div>
+
+  <div class="card bg-white shadow-sm overflow-hidden mt-3">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>No. BPJT</th>
+            <th>Nama Pemohon</th>
+            <th>Divisi</th>
+            <th>Tgl Pemakaian</th>
+            <th>Tgl Pengajuan</th>
+            <th class="text-center">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{if .Requests}}
+            {{range .Requests}}
+            <tr class="hover">
+              <td class="font-mono text-sm font-medium">{{.NoBPJT}}</td>
+              <td>{{.NamaPemohon}}</td>
+              <td><span class="badge badge-ghost badge-sm">{{.SeksiDivisi}}</span></td>
+              <td class="text-sm text-gray-500">{{formatDate .TanggalPemakaian}}</td>
+              <td class="text-sm text-gray-500">{{formatDate .SubmittedAt}}</td>
+              <td class="text-center">
+                <a href="/non-inventory/detail/{{.ID}}" class="btn btn-xs btn-primary">Detail</a>
+              </td>
+            </tr>
+            {{end}}
+          {{else}}
+            <tr>
+              <td colspan="6">
+                <div class="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-3 opacity-40">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                  <p class="font-medium">Tidak ada permintaan menunggu validasi</p>
+                  <p class="text-sm mt-1">Semua permintaan sudah diproses.</p>
+                </div>
+              </td>
+            </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{{end}}
+{{template "base" .}}

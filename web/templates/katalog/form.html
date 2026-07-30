@@ -1,0 +1,176 @@
+{{template "base" .}}
+{{define "content"}}
+
+{{if .Error}}
+<div class="alert alert-error mb-4 max-w-2xl mx-auto"><span>{{.Error}}</span></div>
+{{end}}
+
+<div class="max-w-2xl mx-auto">
+  <div class="card bg-white shadow-sm">
+    <div class="card-body">
+
+      <h2 class="card-title text-gray-700 mb-4">
+        {{if .IsEdit}}Edit Sparepart{{else}}Tambah Item Baru{{end}}
+      </h2>
+
+      <form method="POST" action="/katalog/save" enctype="multipart/form-data" class="space-y-4">
+        {{with .Sparepart}}
+        <input type="hidden" name="id" value="{{.ID}}" />
+        {{end}}
+
+        <!-- Kode Oracle (readonly on edit) -->
+        <div class="form-control">
+          <label class="label pb-1"><span class="label-text text-sm font-medium">Kode Oracle <span
+                class="text-error">*</span></span></label>
+          <input type="text" name="kode_oracle" required value="{{with .Sparepart}}{{.KodeOracle}}{{end}}"
+            placeholder="Kode Oracle" class="input input-bordered input-sm" {{if .IsEdit}}readonly
+            style="background:#f9f9f9" {{end}} />
+        </div>
+
+        <!-- Nama Item -->
+        <div class="form-control">
+          <label class="label pb-1"><span class="label-text text-sm font-medium">Nama Item <span
+                class="text-error">*</span></span></label>
+          <input type="text" name="nama_item" required value="{{with .Sparepart}}{{.NamaItem}}{{end}}"
+            placeholder="Nama lengkap sparepart" class="input input-bordered input-sm" />
+        </div>
+
+        <!-- Deskripsi -->
+        <div class="form-control">
+          <label class="label pb-1"><span class="label-text text-sm font-medium">Deskripsi</span></label>
+          <textarea name="deskripsi" rows="3" placeholder="Deskripsi teknis sparepart"
+            class="textarea textarea-bordered text-sm">{{with .Sparepart}}{{.Deskripsi}}{{end}}</textarea>
+        </div>
+
+        <!-- Jenis Mesin + Lokasi -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">Jenis Mesin</span></label>
+            <input type="text" name="jenis_mesin" value="{{with .Sparepart}}{{.JenisMesin}}{{end}}"
+              placeholder="Contoh: RVS, Pampac" list="jenis-mesin-list" class="input input-bordered input-sm" />
+            <datalist id="jenis-mesin-list">
+              {{range .JenisMesinList}}
+              <option value="{{.}}">
+                {{end}}
+            </datalist>
+          </div>
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">Lokasi</span></label>
+            <input type="text" name="lokasi" value="{{with .Sparepart}}{{.Lokasi}}{{end}}"
+              placeholder="Lokasi penyimpanan" class="input input-bordered input-sm" />
+          </div>
+        </div>
+
+        <!-- Kode RFID -->
+        <div class="form-control">
+          <label class="label pb-1"><span class="label-text text-sm font-medium">Kode RFID</span></label>
+          <input type="text" name="kode_rfid" value="{{with .Sparepart}}{{.KodeRFID}}{{end}}"
+            placeholder="Tag RFID / EPC untuk scan" class="input input-bordered input-sm" />
+          <label class="label pt-1"><span class="label-text-alt text-gray-400">1 tag per jenis sparepart</span></label>
+        </div>
+
+        <!-- Harga, Stok, Min, Max, Usage -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">Harga</span></label>
+            <input type="number" name="harga" min="0" step="0.01" value="{{with .Sparepart}}{{.Harga}}{{end}}"
+              placeholder="0" class="input input-bordered input-sm" />
+          </div>
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">Stok</span></label>
+            <input type="number" name="stok" min="0" value="{{with .Sparepart}}{{.Stok}}{{end}}" placeholder="0"
+              class="input input-bordered input-sm" />
+          </div>
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">Min Stok</span></label>
+            <input type="number" name="min_stok" min="0" value="{{with .Sparepart}}{{.MinStok}}{{end}}" placeholder="0"
+              class="input input-bordered input-sm" />
+          </div>
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">Max Stok</span></label>
+            <input type="number" name="max_stok" min="0" value="{{with .Sparepart}}{{.MaxStok}}{{end}}" placeholder="0"
+              class="input input-bordered input-sm" />
+          </div>
+        </div>
+
+        <!-- Usage Per Year + Foto -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">Usage Per Year (unit)</span></label>
+            <input type="number" name="usage_per_year" min="0" value="{{with .Sparepart}}{{.UsagePerYear}}{{end}}"
+              placeholder="0" class="input input-bordered input-sm" />
+          </div>
+          <div class="form-control">
+            <label class="label pb-1"><span class="label-text text-sm font-medium">Foto Sparepart</span></label>
+
+            <!-- Hidden field preserves current foto_url on edit without re-upload -->
+            <input type="hidden" name="foto_url_existing" value="{{with .Sparepart}}{{.FotoURL}}{{end}}" />
+
+            <!-- Current photo (only shown on edit) -->
+            {{with .Sparepart}}{{if .FotoURL}}
+            <div class="mb-2">
+              <img id="foto-preview" src="{{.FotoURL}}" alt="Foto saat ini"
+                class="h-24 w-24 object-cover rounded-lg border" />
+              <p class="text-xs text-gray-400 mt-1">Foto saat ini</p>
+            </div>
+            {{else}}
+            <div class="mb-2">
+              <img id="foto-preview" src="" alt="" class="h-24 w-24 object-cover rounded-lg border hidden" />
+            </div>
+            {{end}}{{else}}
+            <div class="mb-2">
+              <img id="foto-preview" src="" alt="" class="h-24 w-24 object-cover rounded-lg border hidden" />
+            </div>
+            {{end}}
+
+            <input type="file" name="foto_file" id="foto-file" accept="image/jpeg,image/png,image/webp"
+              class="file-input file-input-bordered file-input-sm w-full"
+              onchange="
+                var f = this.files[0];
+                if (!f) return;
+                var prev = document.getElementById('foto-preview');
+                prev.src = URL.createObjectURL(f);
+                prev.classList.remove('hidden');
+              " />
+            <label class="label pt-1">
+              <span class="label-text-alt text-gray-400">JPG / PNG / WebP, maks 5 MB. Kosongkan untuk tetap pakai foto lama.</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Upload PDF Dokumen -->
+        <div class="form-control">
+          <label class="label pb-1"><span class="label-text text-sm font-medium">Upload PDF Dokumen</span></label>
+          {{with .Sparepart}}{{if .PdfURL}}
+          <div class="mb-2 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#dc2626" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+            </svg>
+            <a href="{{.PdfURL}}" target="_blank" class="text-sm text-blue-600 underline">Lihat PDF saat ini</a>
+          </div>
+          {{end}}{{end}}
+          <input type="hidden" name="pdf_url_existing" value="{{with .Sparepart}}{{.PdfURL}}{{end}}" />
+          <input type="file" name="pdf_file" accept="application/pdf"
+            class="file-input file-input-bordered file-input-sm w-full" />
+          <label class="label pt-1">
+            <span class="label-text-alt text-gray-400">Format PDF, maks 10 MB. Kosongkan untuk tetap pakai PDF lama.</span>
+          </label>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="btn text-white" style="background:#568C20;border-color:#568C20">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" />
+            </svg>
+            {{if .IsEdit}}Simpan Perubahan{{else}}Tambah Item{{end}}
+          </button>
+          <a href="/katalog" class="btn btn-ghost">Batal</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+{{end}}

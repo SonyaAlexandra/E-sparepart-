@@ -1,0 +1,147 @@
+{{template "base" .}}
+{{define "content"}}
+
+<div class="flex flex-wrap gap-3 mb-5">
+  <form method="GET" action="/stok" class="flex flex-wrap gap-3 flex-1">
+    <select name="jenis_mesin" class="select select-bordered select-sm" onchange="this.form.submit()">
+      <option value="">Semua Jenis Mesin</option>
+      {{range .JenisMesinList}}
+      <option value="{{.}}" {{if eq . $.FilterJenis}}selected{{end}}>{{.}}</option>
+      {{end}}
+    </select>
+    <input type="text" name="search" value="{{.Search}}" placeholder="Cari item..."
+      class="input input-bordered input-sm flex-1 min-w-36" />
+    <select name="status" class="select select-bordered select-sm" onchange="this.form.submit()">
+      <option value="">Semua Status</option>
+      <option value="tersedia" {{if eq .StatusFilter "tersedia" }}selected{{end}}>Tersedia</option>
+      <option value="menipis" {{if eq .StatusFilter "menipis" }}selected{{end}}>Menipis</option>
+      <option value="habis" {{if eq .StatusFilter "habis" }}selected{{end}}>Habis</option>
+      <option value="nonstok" {{if eq .StatusFilter "nonstok" }}selected{{end}}>Nonstok</option>
+    </select>
+    <button type="submit" class="btn btn-sm text-white" style="background:#568C20;border-color:#568C20">Cari</button>
+  </form>
+</div>
+
+<!-- Summary: badge status + card Total dalam satu baris compact -->
+<div class="flex flex-wrap gap-2 mb-5 items-center">
+  <span style="background:rgba(22,163,74,0.08);color:#16a34a;border:1px solid rgba(22,163,74,0.2)"
+    class="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full">
+    <span class="font-bold text-base">{{.CountTersedia}}</span> Tersedia
+  </span>
+
+  <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)"
+    class="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full">
+    <span class="font-bold text-base">{{.CountMenipis}}</span> Menipis
+  </span>
+
+  <span style="background:rgba(220,38,38,0.08);color:#dc2626;border:1px solid rgba(220,38,38,0.2)"
+    class="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full">
+    <span class="font-bold text-base">{{.CountHabis}}</span> Habis
+  </span>
+
+  <span style="background:rgba(107,114,128,0.08);color:#6b7280;border:1px solid rgba(107,114,128,0.2)"
+    class="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full">
+    <span class="font-bold text-base">{{.CountNonstok}}</span> Nonstok
+  </span>
+
+  {{if .IsAdminOrSPV}}
+  <!-- Separator vertikal -->
+  <div class="w-px h-6 bg-gray-200 mx-1 hidden sm:block"></div>
+  <!-- Card Total Nilai — horizontal & compact -->
+  <div class="flex items-center gap-3 bg-white shadow-sm border-l-4 rounded-lg px-4 py-2"
+    style="border-color:{{if .TotalValueAlert}}#dc2626{{else}}#568C20{{end}}">
+    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+      style="background-color:{{if .TotalValueAlert}}#fef2f2{{else}}#f0f7e8{{end}}">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+        stroke="{{if .TotalValueAlert}}#dc2626{{else}}#568C20{{end}}" class="w-4 h-4">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+    </div>
+    <div class="leading-tight">
+      <p class="text-xs text-gray-400 uppercase font-semibold tracking-wide">Total Nilai</p>
+      <p class="text-base font-bold" style="color:{{if .TotalValueAlert}}#dc2626{{else}}#568C20{{end}}">{{formatRupiah .TotalValueStok}}</p>
+    </div>
+  </div>
+  {{end}}
+</div>
+
+
+
+<!-- Table -->
+<div class="card bg-white shadow-sm overflow-hidden">
+  <div class="table-responsive">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Deskripsi Item</th>
+          <th>Kode Oracle</th>
+          <th>Lokasi</th>
+          <th>Jenis Mesin</th>
+          <th class="text-center">Stok</th>
+          <th class="text-center">Min</th>
+          <th class="text-center">Max</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $i, $s := .Spareparts}}
+        <tr class="hover">
+          <td class="text-gray-400">{{add $i 1}}</td>
+          <td>
+            <div class="font-medium text-sm">{{$s.Deskripsi}}</div>
+          </td>
+          <td class="text-xs text-gray-500 font-mono">{{$s.KodeOracle}}</td>
+          <td class="text-sm">{{$s.Lokasi}}</td>
+
+          {{/* JENIS MESIN */}}
+          <td>
+            <span style="background:rgba(133,128,143,0.08);color:#85808f;border:1px solid rgba(133,128,143,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#85808f" class="w-1.5 h-1.5 rounded-full"></span>{{$s.JenisMesin}}</span>
+          </td>
+
+          {{/* STOK NUMBER */}}
+          <td class="text-center font-bold text-lg">
+            {{if eq $s.Stok 0}}
+            <span style="color:#dc2626">{{$s.Stok}}</span>
+            {{else if le $s.Stok $s.MinStok}}
+            <span style="color:#d97706">{{$s.Stok}}</span>
+            {{else}}
+            <span style="color:#16a34a">{{$s.Stok}}</span>
+            {{end}}
+          </td>
+
+          <td class="text-center text-gray-400">{{$s.MinStok}}</td>
+          <td class="text-center text-gray-400">{{$s.MaxStok}}</td>
+
+          {{/* STOK STATUS */}}
+          <td>
+            {{if eq ($s.StokStatus) "nonstok"}}
+            <span style="background:rgba(107,114,128,0.08);color:#6b7280;border:1px solid rgba(107,114,128,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#6b7280" class="w-1.5 h-1.5 rounded-full"></span>Nonstok</span>
+            {{else if eq ($s.StokStatus) "habis"}}
+            <span style="background:rgba(220,38,38,0.08);color:#dc2626;border:1px solid rgba(220,38,38,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-0.5 rounded-full whitespace-nowrap">
+              <span style="background:#dc2626" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Habis
+            </span>
+            {{else if eq ($s.StokStatus) "menipis"}}
+            <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full"></span>Menipis</span>
+            {{else}}
+            <span style="background:rgba(22,163,74,0.08);color:#16a34a;border:1px solid rgba(22,163,74,0.2)"
+              class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+              <span style="background:#16a34a" class="w-1.5 h-1.5 rounded-full"></span>Tersedia</span>
+            {{end}}
+          </td>
+
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}

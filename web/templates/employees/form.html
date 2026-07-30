@@ -1,0 +1,253 @@
+{{template "base" .}}
+{{define "content"}}
+
+<div class="max-w-lg mx-auto"
+  x-data="{
+    idCardNumber: '{{if .Employee}}{{.Employee.IDCardNumber}}{{end}}',
+    fingerprintTemplate: '',
+    scanned: false,
+    fingerprintEnrolling: false,
+    fingerprintError: '',
+    employeeId: {{if .Employee}}{{.Employee.ID}}{{else}}0{{end}},
+    _enrollTimeout: null,
+    sessionId: '',
+
+    init() {
+      this.$nextTick(() => {
+        if (this.$refs.initialTemplate && this.$refs.initialTemplate.value) {
+          this.fingerprintTemplate = this.$refs.initialTemplate.value;
+          this.scanned = true;
+        }
+      });
+      this.initSession();
+    },
+
+    async initSession() {
+      try {
+        var res = await fetch('/api/rfid/session', { method: 'POST' });
+        var d = await res.json();
+        this.sessionId = d.session_id;
+        this.listenSSE();
+      } catch(e) { if (window.showToast) showToast('Gagal memulai sesi SSE device', 'error'); }
+    },
+
+    startFingerprintEnroll() {
+      var self = this;
+      this.fingerprintError = '';
+      this.fingerprintEnrolling = true;
+      fetch('/api/fingerprint/scan-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ purpose: 'enroll', employee_id: String(this.employeeId || '0') })
+      }).catch(function(err) {
+        self.fingerprintEnrolling = false;
+        if (window.showToast) showToast('Gagal menghubungi server: ' + err.message, 'error');
+      });
+      this._enrollTimeout = setTimeout(function() {
+        if (self.fingerprintEnrolling) {
+          self.fingerprintEnrolling = false;
+          fetch('/api/fingerprint/scan-cancel', { method: 'POST' }).catch(function() {});
+          if (window.showToast) showToast('Waktu enroll habis, coba lagi', 'error');
+        }
+      }, 20000);
+    },
+
+    listenSSE() {
+      if (!this.sessionId) return;
+      var self = this;
+      var es = new EventSource('/api/rfid/stream?session_id=' + this.sessionId);
+
+      es.addEventListener('fingerprint_scanned', function(e) {
+        var d = JSON.parse(e.data);
+        // Hanya proses jika employee_id cocok dengan form ini
+        var formEmpId = String(self.employeeId || '0');
+        var eventEmpId = String(d.employee_id || '0');
+        if (eventEmpId !== formEmpId) return;
+
+        if (d.status === 'error') {
+          self.fingerprintEnrolling = false;
+          clearTimeout(self._enrollTimeout);
+          self.fingerprintError = d.message || 'Sidik jari sudah terdaftar untuk karyawan lain';
+          self.fingerprintTemplate = '';
+          self.scanned = false;
+          if (window.showToast) showToast(self.fingerprintError, 'error', 6000);
+          return;
+        }
+
+        if (d.template) {
+          self.fingerprintTemplate = d.template;
+        }
+        self.fingerprintEnrolling = false;
+        clearTimeout(self._enrollTimeout);
+        self.scanned = true;
+        if (window.showToast) showToast('Sidik jari berhasil direkam!', 'success');
+      });
+      es.addEventListener('fingerprint_cancelled', function(e) {
+        self.fingerprintEnrolling = false;
+        clearTimeout(self._enrollTimeout);
+        if (window.showToast) showToast('Scan dibatalkan / waktu habis', 'error');
+      });
+    }
+  }"
+  x-init="init()">
+
+  <!-- Breadcrumb -->
+  <div class="text-sm breadcrumbs mb-5 text-base-content/60">
+    <ul>
+      <li><a href="/users?tab=employees" class="hover:text-primary">Kelola User</a></li>
+      <li>{{.Title}}</li>
+    </ul>
+  </div>
+
+  <div class="card bg-base-100 shadow-sm border border-base-200">
+    <div class="card-body">
+      <h2 class="card-title text-lg mb-1">{{.Title}}</h2>
+      <p class="text-sm text-base-content/60 mb-4">
+        Data karyawan ini digunakan untuk identifikasi sidik jari (U.are.U 4500) saat pengambilan sparepart.
+      </p>
+
+      {{if .Error}}
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          if (window.showToast) showToast('{{.Error}}', 'error', 6000);
+        });
+      </script>
+      {{end}}
+
+      <form method="POST" action="/employees/save">
+        {{if .IsEdit}}
+        <input type="hidden" name="id" value="{{.Employee.ID}}">
+        {{end}}
+
+        <!-- Hidden input untuk template sidik jari -->
+        <input type="hidden" x-ref="initialTemplate" value="{{if .Employee}}{{.Employee.FingerprintTemplate}}{{end}}" />
+        <textarea name="fingerprint_template" x-model="fingerprintTemplate" :value="fingerprintTemplate" class="hidden" style="display: none;"></textarea>
+
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-medium">Nama Lengkap <span class="text-error">*</span></span>
+          </label>
+          <input type="text" name="full_name" required
+            value="{{if .Employee}}{{.Employee.FullName}}{{end}}"
+            placeholder="Nama lengkap karyawan"
+            class="input input-bordered input-sm"/>
+          <label class="label">
+            <span class="label-text-alt text-base-content/50">
+              Nama ini akan otomatis muncul di form pengambilan setelah scan berhasil.
+            </span>
+          </label>
+        </div>
+
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-medium">Nomor ID <span class="text-error">*</span></span>
+          </label>
+          <input type="text" name="id_card_number" required
+            x-model="idCardNumber"
+            placeholder="Ketik nomor id sesuai urutan pendaftaran"
+            class="input input-bordered input-sm font-mono"/>
+          <label class="label">
+            <span class="label-text-alt text-base-content/50">
+              Nomor ID ini digunakan sebagai referensi pencarian sidik jari.
+            </span>
+          </label>
+        </div>
+
+        <!-- Area pendaftaran sidik jari on-demand -->
+        <div x-show="!scanned"
+          class="rounded-lg border border-dashed py-4 px-4 mb-4"
+          style="border-color:#568C20;background:#f6fbf2">
+          <div class="flex items-center gap-3 mb-3">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#568C20" class="w-6 h-6 flex-shrink-0">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7.864 4.243A7.5 7.5 0 0 1 19.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.459 7.459 0 0 0 4.5 10.5a7.464 7.464 0 0 1-1.15 3.993m1.989 3.559A11.209 11.209 0 0 0 8.25 10.5a3.75 3.75 0 1 1 7.5 0c0 .527-.021 1.049-.064 1.565M12 10.5a14.94 14.94 0 0 1-3.6 9.75m6.633-4.596a18.666 18.666 0 0 1-2.485 5.33"/>
+            </svg>
+            <div>
+              <p class="text-xs font-semibold" style="color:#3a6015">Registrasi Sidik Jari (U.are.U 4500)</p>
+              <p class="text-xs text-base-content/60" x-text="fingerprintEnrolling ? 'Menunggu sidik jari... taruh jari di scanner' : 'Klik tombol lalu tempelkan jari karyawan ke scanner'"></p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button"
+              @click="startFingerprintEnroll()"
+              :disabled="fingerprintEnrolling"
+              class="btn btn-sm btn-success text-white disabled:opacity-50">
+              <span x-show="fingerprintEnrolling" class="loading loading-spinner loading-xs"></span>
+              <svg x-show="!fingerprintEnrolling" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.864 4.243A7.5 7.5 0 0 1 19.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.459 7.459 0 0 0 4.5 10.5a7.464 7.464 0 0 1-1.15 3.993m1.989 3.559A11.209 11.209 0 0 0 8.25 10.5a3.75 3.75 0 1 1 7.5 0c0 .527-.021 1.049-.064 1.565M12 10.5a14.94 14.94 0 0 1-3.6 9.75m6.633-4.596a18.666 18.666 0 0 1-2.485 5.33" />
+              </svg>
+              <span x-text="fingerprintEnrolling ? 'Menunggu sidik jari...' : 'Daftarkan Sidik Jari'"></span>
+            </button>
+            <button type="button" x-show="fingerprintEnrolling"
+              @click="fingerprintEnrolling=false; clearTimeout(_enrollTimeout); fetch('/api/fingerprint/scan-cancel',{method:'POST'})"
+              class="btn btn-sm btn-ghost text-error">Batal</button>
+          </div>
+        </div>
+
+        <!-- Notif sukses enroll -->
+        <div x-show="scanned"
+          class="alert py-2 text-sm mb-4 border"
+          style="background:#f0fae8;border-color:#86c95a">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#568C20" class="w-4 h-4 flex-shrink-0">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+          </svg>
+          <span style="color:#3a6015" class="font-medium">Sidik jari sudah terdaftar!</span>
+          <button type="button" class="btn btn-xs btn-ghost ml-auto"
+            @click="scanned=false; fingerprintTemplate=''; fingerprintError=''"
+            style="color:#cc3333">Hapus / Daftar Ulang</button>
+        </div>
+
+        <!-- Notif error enroll -->
+        <div x-show="fingerprintError"
+          class="alert py-2 text-sm mb-4 border"
+          style="background:#fdf2f2;border-color:#f8b4b4">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#cc3333" class="w-4 h-4 flex-shrink-0">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+          </svg>
+          <span style="color:#cc3333" class="font-medium" x-text="fingerprintError"></span>
+          <button type="button" class="btn btn-xs btn-ghost ml-auto"
+            @click="fingerprintError=''"
+            style="color:#cc3333">Tutup</button>
+        </div>
+
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-medium">Catatan</span>
+            <span class="label-text-alt text-base-content/50">Opsional</span>
+          </label>
+          <input type="text" name="notes"
+            value="{{if .Employee}}{{.Employee.Notes}}{{end}}"
+            placeholder="Nomor HP, shift, divisi, dsb."
+            class="input input-bordered input-sm"/>
+        </div>
+
+        {{if .IsEdit}}
+        <div class="form-control mb-6">
+          <label class="label cursor-pointer justify-start gap-3">
+            <input type="checkbox" name="is_active" value="1"
+              class="checkbox checkbox-success checkbox-sm"
+              {{if .Employee}}{{if .Employee.IsActive}}checked{{end}}{{end}}/>
+            <span class="label-text font-medium">Karyawan Aktif</span>
+          </label>
+          <label class="label pt-0">
+            <span class="label-text-alt text-base-content/50">
+              Non-aktifkan jika karyawan sudah tidak bekerja.
+            </span>
+          </label>
+        </div>
+        {{end}}
+
+        <div class="flex gap-2 justify-end">
+          <a href="/users?tab=employees" class="btn btn-sm btn-ghost">Batal</a>
+          <button type="submit" :disabled="fingerprintEnrolling || fingerprintError !== ''" class="btn btn-sm btn-primary disabled:opacity-50">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"/>
+            </svg>
+            {{if .IsEdit}}Simpan Perubahan{{else}}Tambah Karyawan{{end}}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{{end}}

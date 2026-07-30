@@ -1,0 +1,96 @@
+{{template "base" .}}
+{{define "content"}}
+
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+  <div>
+    <p class="text-sm text-base-content/60 mt-0.5">Validasi request dan riwayat pengambilan sparepart</p>
+  </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="tabs tabs-bordered mb-5">
+  <a href="/validasi" class="tab tab-bordered tab-active font-medium">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    </svg>
+    Validasi
+  </a>
+  <a href="/pengambilan/semua" class="tab tab-bordered font-medium">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+    </svg>
+    Riwayat Pengambilan
+  </a>
+</div>
+
+<!-- Konten Validasi (tidak berubah dari sebelumnya) -->
+<p class="text-sm text-gray-500 mb-4">
+  {{if eq .Stage 1}}Menampilkan request yang menunggu persetujuan <strong>Admin SP</strong>{{end}}
+  {{if eq .Stage 2}}Menampilkan request yang menunggu persetujuan <strong>SPV Pemohon</strong> divisi Anda{{end}}
+  {{if eq .Stage 3}}Menampilkan request yang menunggu persetujuan <strong>SPV SP</strong>{{end}}
+</p>
+
+<div class="card bg-white shadow-sm overflow-hidden">
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>No WR/WO</th>
+          <th>Nama</th>
+          <th>Divisi</th>
+          <th>Tanggal Pengambilan</th>
+          <th>Status</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{$requests := .Requests}}
+        {{if $requests}}
+        {{range $requests}}
+        <tr class="hover">
+          <td class="font-mono font-medium text-sm">{{.NoWRWO}}</td>
+          <td>{{.RequesterName}}</td>
+          <td><span class="badge badge-ghost badge-sm">{{.Division}}</span></td>
+          <td class="text-sm text-gray-500">{{formatDateTime .SubmittedAt}}</td>
+          <td>
+            {{if eq $.Stage 1}}
+            <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+              <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Tahap 1 - Admin SP</span>
+            {{else if eq $.Stage 2}}
+            <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+              <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Tahap 2 - SPV Pemohon</span>
+            {{else if eq $.Stage 3}}
+            <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+              <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Tahap 3 - SPV SP</span>
+            {{else}}
+            <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+              <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>
+              {{if eq .CurrentStage 1}}Tahap 1 - Admin SP{{else if eq .CurrentStage 2}}Tahap 2 - SPV Pemohon{{else if eq .CurrentStage 3}}Tahap 3 - SPV SP{{else}}Pending{{end}}</span>
+            {{end}}
+          </td>
+          <td>
+            <a href="/validasi/{{.ID}}" class="btn btn-sm text-white" style="background:#568C20;border-color:#568C20">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              Detail
+            </a>
+          </td>
+        </tr>
+        {{end}}
+        {{else}}
+        <tr>
+          <td colspan="6" class="text-center py-16 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mx-auto mb-3 opacity-20">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            <p class="font-medium">Tidak ada request yang perlu divalidasi saat ini</p>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{{end}}

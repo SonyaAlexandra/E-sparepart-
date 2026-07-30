@@ -1,0 +1,367 @@
+{{template "base" .}}
+{{define "content"}}
+
+<!-- ── Section Label: Stok ── -->
+<div class="relative -mt-3 mb-2">
+  <div class="absolute inset-0 flex items-center">
+    <div class="w-full border-t border-gray-200"></div>
+  </div>
+  <div class="relative flex justify-start">
+    <span class="bg-base-200 pr-4 text-xs font-semibold uppercase tracking-widest text-gray-400">Stok</span>
+  </div>
+</div>
+
+{{/* ── Baris 1: Summary cards kiri + kosong kanan ── */}}
+<div class="grid grid-cols-1 {{if .ShowRequestOrder}}lg:grid-cols-5{{end}} gap-4 mb-3">
+  <div class="{{if .ShowRequestOrder}}lg:col-span-3{{end}}">
+    <div class="grid grid-cols-2 gap-3">
+      <div class="card bg-white shadow-sm border-l-4" style="border-color:#dc2626">
+        <div class="card-body p-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-semibold tracking-wide leading-none mb-1">Stok Habis</p>
+              <p class="text-2xl font-bold leading-none" style="color:#dc2626">{{.ZeroStockCount}}</p>
+            </div>
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#fef2f2">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#dc2626" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card bg-white shadow-sm border-l-4" style="border-color:#d97706">
+        <div class="card-body p-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-semibold tracking-wide leading-none mb-1">Stok Menipis</p>
+              <p class="text-2xl font-bold leading-none" style="color:#d97706">{{.LowStockCount}}</p>
+            </div>
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#fffbeb">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#d97706" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{/* ── Baris 2: Stok table | Request Order table sejajar ── */}}
+<div class="grid grid-cols-1 {{if .ShowRequestOrder}}lg:grid-cols-5{{end}} gap-4 mb-4 items-start">
+
+  <!-- Stok Habis & Menipis table -->
+  <div class="{{if .ShowRequestOrder}}lg:col-span-3{{end}}">
+    <div class="card bg-white shadow-sm">
+      <div class="card-body p-0">
+        <div class="flex items-center justify-between px-4 py-3 border-b">
+          <h2 class="font-semibold text-sm text-gray-700 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#568C20" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+            </svg>
+            Stok Habis &amp; Menipis
+          </h2>
+          <a href="/stok?status=menipis" class="btn btn-xs text-white" style="background:#568C20;border-color:#568C20;font-size:0.65rem">Lihat Semua</a>
+        </div>
+        <div class="table-responsive" style="max-height:230px">
+          <table class="table" style="font-size:0.72rem">
+            <thead>
+              <tr class="text-white uppercase tracking-wide" style="font-size:0.65rem;background:#9ca3af">
+                <th class="py-2 px-3">Nama Item</th>
+                <th class="py-2 px-3">Kode Oracle</th>
+                <th class="py-2 px-3 text-center">Stok</th>
+                <th class="py-2 px-3 text-center">Min</th>
+                <th class="py-2 px-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{if .LowStockItems}}
+              {{range $v := .LowStockItems}}
+              <tr class="hover">
+                <td class="py-1.5 px-3 font-medium max-w-[160px] truncate">{{$v.NamaItem}}</td>
+                <td class="py-1.5 px-3 text-gray-400" style="font-size:0.65rem">{{$v.KodeOracle}}</td>
+                <td class="py-1.5 px-3 text-center font-bold">
+                  {{if eq $v.Stok 0}}<span style="color:#dc2626">0</span>
+                  {{else}}<span style="color:#d97706">{{$v.Stok}}</span>{{end}}
+                </td>
+                <td class="py-1.5 px-3 text-center text-gray-400">{{$v.MinStok}}</td>
+                <td class="py-1.5 px-3">
+                  {{if eq $v.Stok 0}}
+                  <span style="background:rgba(220,38,38,0.08);color:#dc2626;border:1px solid rgba(220,38,38,0.2)" class="inline-flex items-center gap-1 text-xs font-medium px-3 py-0.5 rounded-full whitespace-nowrap">
+                    <span style="background:#dc2626" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Habis
+                  </span>
+                  {{else}}
+                  <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)" class="inline-flex items-center gap-1 text-xs font-medium px-3 py-0.5 rounded-full whitespace-nowrap">
+                    <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Menipis
+                  </span>
+                  {{end}}
+                </td>
+              </tr>
+              {{end}}
+              {{else}}
+              <tr>
+                <td colspan="5" class="text-center py-8 text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mx-auto mb-2 opacity-30">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                  <p class="text-xs">Semua stok dalam kondisi aman</p>
+                </td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{if .ShowRequestOrder}}
+  <!-- Request Order table — sejajar dengan stok table -->
+  <div class="lg:col-span-2">
+    <div class="card bg-white shadow-sm">
+      <div class="card-body p-0">
+        <div class="flex items-center justify-between px-4 py-3 border-b">
+          <h2 class="font-semibold text-sm text-gray-700 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#0B2D59" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            Request Order Stok
+            <span class="badge badge-sm text-white ml-1" style="background:#0B2D59;font-size:0.6rem">{{.PendingOrdersCount}}</span>
+          </h2>
+        </div>
+        <div class="overflow-x-auto overflow-y-auto" style="max-height:230px;min-height:230px">
+          <table class="table w-full" style="font-size:0.72rem">
+            <thead class="sticky top-0 z-10">
+              <tr class="text-white uppercase tracking-wide" style="font-size:0.65rem">
+                <th class="py-2 px-3" style="background:#bd0000 !important">Nama Item</th>
+                <th class="py-2 px-3" style="background:#bd0000 !important">Pemohon</th>
+                <th class="py-2 px-3" style="background:#bd0000 !important">Tgl</th>
+                <th class="py-2 px-3 text-center" style="background:#bd0000 !important">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{if .PendingOrders}}
+              {{range $v := .PendingOrders}}
+              <tr id="ro-row-{{$v.ID}}" class="hover align-top">
+                <td class="py-1.5 px-3">
+                  {{if $v.Items}}
+                  <ul class="space-y-0.5">
+                    {{range $v.Items}}
+                    <li class="flex items-center gap-1 flex-wrap">
+                      <span class="font-medium text-gray-800 truncate max-w-[100px]">{{.NamaItemSnapshot}}</span>
+                      <span class="badge badge-ghost" style="font-size:0.55rem;padding:1px 4px">x{{.Jumlah}}</span>
+                    </li>
+                    {{end}}
+                  </ul>
+                  {{else}}
+                  <span class="text-gray-400 italic">-</span>
+                  {{end}}
+                </td>
+                <td class="py-1.5 px-3 text-gray-700">{{$v.PemohonFullName}}</td>
+                <td class="py-1.5 px-3 text-gray-400 whitespace-nowrap">{{formatDate $v.CreatedAt}}</td>
+                <td class="py-1.5 px-3 text-center">
+                  <button type="button" class="btn btn-xs text-white" style="background:#dc2626;border-color:#dc2626;font-size:0.6rem" onclick="markOrderDone({{$v.ID}}, this)">Done</button>
+                </td>
+              </tr>
+              {{end}}
+              {{else}}
+              <tr>
+                <td colspan="4" class="text-center py-8 text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="w-8 h-8 mx-auto mb-2 text-gray-300">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+                  </svg>
+                  <p class="text-xs">Belum ada Request Order</p>
+                </td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{end}}
+
+</div><!-- end tables grid -->
+
+
+
+<!-- ── Section Divider: Validasi ── -->
+<div class="relative mt-3 mb-1">
+  <div class="absolute inset-0 flex items-center">
+    <div class="w-full border-t border-gray-200"></div>
+  </div>
+  <div class="relative flex justify-start">
+    <span class="bg-base-200 pr-4 text-xs font-semibold uppercase tracking-widest text-gray-400">Validasi</span>
+  </div>
+</div>
+
+<!-- Summary cards Validasi — 2 kolom sejajar -->
+<div class="grid grid-cols-2 gap-4 mb-3 mt-1">
+  <!-- Card Pengambilan -->
+  <div class="card bg-white shadow-sm border-l-4" style="border-color:#ffb71c">
+    <div class="card-body p-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs text-gray-500 uppercase font-semibold tracking-wide leading-none mb-1">Inventory</p>
+          <p class="text-2xl font-bold leading-none" style="color:#ffb71c">{{.PendingCount}}</p>
+        </div>
+        <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#fff8e6">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#ffb71c" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Card Non-Inventory -->
+  <div class="card bg-white shadow-sm border-l-4" style="border-color:#ffb71c">
+    <div class="card-body p-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs text-gray-500 uppercase font-semibold tracking-wide leading-none mb-1">Non-Inventory</p>
+          <p class="text-2xl font-bold leading-none" style="color:#ffb71c">{{.PendingNICount}}</p>
+        </div>
+        <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#fff8e6">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#ffb71c" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Validation tables — 2 kolom: Inventory | Non-Inventory -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+  <!-- Kolom kiri: Pengambilan Inventory -->
+  <div class="card bg-white shadow-sm">
+    <div class="card-body p-0">
+      <div class="flex items-center justify-between px-4 py-3 border-b">
+        <h2 class="font-semibold text-sm text-gray-700 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#ca8a04" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+          Inventory — Menunggu Validasi
+          {{if .PendingCount}}<span class="badge badge-sm text-white ml-1" style="background:#ca8a04;font-size:0.6rem">{{.PendingCount}}</span>{{end}}
+        </h2>
+        <a href="/validasi" class="btn btn-xs text-white" style="background:#568C20;border-color:#568C20;font-size:0.65rem">Validasi</a>
+      </div>
+      {{if .PendingRequests}}
+      <div class="overflow-x-auto overflow-y-auto" style="max-height:230px">
+        <table class="table" style="font-size:0.72rem">
+          <thead class="sticky top-0 z-10">
+            <tr class="text-white uppercase tracking-wide" style="font-size:0.65rem">
+              <th class="py-2 px-3" style="background:#6b7280 !important">No WR/WO</th>
+              <th class="py-2 px-3" style="background:#6b7280 !important">Pemohon</th>
+              <th class="py-2 px-3" style="background:#6b7280 !important">Divisi</th>
+              <th class="py-2 px-3" style="background:#6b7280 !important">Tanggal</th>
+              <th class="py-2 px-3" style="background:#6b7280 !important">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{range .PendingRequests}}
+            <tr class="hover">
+              <td class="py-1.5 px-3 font-medium">{{.NoWRWO}}</td>
+              <td class="py-1.5 px-3">{{.RequesterName}}</td>
+              <td class="py-1.5 px-3"><span class="badge badge-ghost" style="font-size:0.6rem">{{.Division}}</span></td>
+              <td class="py-1.5 px-3 text-gray-400">{{formatDate .SubmittedAt}}</td>
+              <td class="py-1.5 px-3">
+                <a href="/validasi/{{.ID}}" class="btn btn-xs text-white" style="background:#568C20;border-color:#568C20;font-size:0.6rem">Review</a>
+              </td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{else}}
+      <div class="text-center py-8 text-gray-400">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mx-auto mb-2 opacity-30">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+        <p class="text-xs">Tidak ada request menunggu validasi</p>
+      </div>
+      {{end}}
+    </div>
+  </div>
+
+  <!-- Kolom kanan: Non-Inventory -->
+  <div class="card bg-white shadow-sm">
+    <div class="card-body p-0">
+      <div class="flex items-center justify-between px-4 py-3 border-b">
+        <h2 class="font-semibold text-sm text-gray-700 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#ca8a04" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+          Non-Inventory — Menunggu Validasi
+          {{if .PendingNICount}}<span class="badge badge-sm text-white ml-1" style="background:#ca8a04;font-size:0.6rem">{{.PendingNICount}}</span>{{end}}
+        </h2>
+        <a href="/non-inventory/validasi" class="btn btn-xs text-white" style="background:#568C20;border-color:#568C20;font-size:0.65rem">Validasi</a>
+      </div>
+      {{if .PendingNI}}
+      <div class="overflow-x-auto overflow-y-auto" style="max-height:230px">
+        <table class="table" style="font-size:0.72rem">
+          <thead class="sticky top-0 z-10">
+            <tr class="text-white uppercase tracking-wide" style="font-size:0.65rem">
+              <th class="py-2 px-3" style="background:#6b7280 !important">No BPJT</th>
+              <th class="py-2 px-3" style="background:#6b7280 !important">Pemohon</th>
+              <th class="py-2 px-3" style="background:#6b7280 !important">Seksi</th>
+              <th class="py-2 px-3" style="background:#6b7280 !important">Tgl Pengajuan</th>
+              <th class="py-2 px-3" style="background:#6b7280 !important">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{range .PendingNI}}
+            <tr class="hover">
+              <td class="py-1.5 px-3 font-mono font-medium">{{.NoBPJT}}</td>
+              <td class="py-1.5 px-3">{{.NamaPemohon}}</td>
+              <td class="py-1.5 px-3"><span class="badge badge-ghost" style="font-size:0.6rem">{{.SeksiDivisi}}</span></td>
+              <td class="py-1.5 px-3 text-gray-400">{{formatDate .SubmittedAt}}</td>
+              <td class="py-1.5 px-3">
+                <a href="/non-inventory/detail/{{.ID}}" class="btn btn-xs text-white" style="background:#568C20;border-color:#568C20;font-size:0.6rem">Review</a>
+              </td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{else}}
+      <div class="text-center py-8 text-gray-400">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mx-auto mb-2 opacity-30">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+        <p class="text-xs">Tidak ada Non-Inventory menunggu validasi</p>
+      </div>
+      {{end}}
+    </div>
+  </div>
+
+</div><!-- end validasi grid -->
+
+<script>
+  function markOrderDone(orderID, btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>';
+    fetch('/request-order/' + orderID + '/done', { method: 'POST' })
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        var row = document.getElementById('ro-row-' + orderID);
+        if (row) {
+          row.style.transition = 'opacity 0.4s';
+          row.style.opacity = '0';
+          setTimeout(function(){ row.remove(); }, 400);
+        }
+        if (window.showToast) showToast(d.message || 'Request Order selesai.', 'success');
+      })
+      .catch(function() {
+        btn.disabled = false;
+        btn.innerHTML = 'Done';
+        if (window.showToast) showToast('Gagal memperbarui status.', 'error');
+      });
+  }
+</script>
+
+{{end}}

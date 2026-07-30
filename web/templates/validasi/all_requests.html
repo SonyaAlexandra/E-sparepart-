@@ -1,0 +1,159 @@
+{{template "base" .}}
+{{define "content"}}
+
+<!-- Header -->
+{{if eq .UserRole "pemohon"}}
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+  <div>
+    <p class="text-sm text-base-content/60 mt-0.5">Riwayat Pengambilan Sparepart</p>
+  </div>
+</div>
+{{else}}
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+  <div>
+    <p class="text-sm text-base-content/60 mt-0.5">Validasi request dan riwayat pengambilan sparepart</p>
+  </div>
+</div>
+
+<!-- Tab Navigation (hanya untuk non-Pemohon) -->
+<div class="tabs tabs-bordered mb-5">
+  <a href="/validasi" class="tab tab-bordered font-medium">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    </svg>
+    Validasi
+  </a>
+  <!-- Tab Riwayat Pengambilan (AKTIF) -->
+  <a href="/pengambilan/semua" class="tab tab-bordered tab-active font-medium">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+    </svg>
+    Riwayat Pengambilan
+  </a>
+</div>
+{{end}}
+
+<!-- Filter bar + aksi -->
+<form method="GET" action="/pengambilan/semua" class="flex flex-wrap gap-3 mb-5 items-end">
+  <div class="form-control">
+    <label class="label pb-1"><span class="label-text text-sm font-medium">Dari Tanggal</span></label>
+    <input type="date" name="from" value="{{.FromDate}}" class="input input-bordered input-sm" />
+  </div>
+  <div class="form-control">
+    <label class="label pb-1"><span class="label-text text-sm font-medium">Sampai Tanggal</span></label>
+    <input type="date" name="to" value="{{.ToDate}}" class="input input-bordered input-sm" />
+  </div>
+  <button type="submit" class="btn btn-sm text-white" style="background:#568C20;border-color:#568C20">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+    </svg>
+    Filter
+  </button>
+  {{if or .FromDate .ToDate}}
+  <a href="/pengambilan/semua" class="btn btn-sm btn-ghost border">Reset</a>
+  {{end}}
+  <a href="/pengambilan/semua/excel?from={{.FromDate}}&to={{.ToDate}}" class="btn btn-sm btn-outline ml-auto" style="border-color:#217346;color:#217346">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+    </svg>
+    Download Excel
+  </a>
+</form>
+
+<div class="card bg-white shadow-sm overflow-hidden">
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>No WR/WO</th>
+          <th>Pemohon</th>
+          <th>Divisi</th>
+          <th>Tanggal</th>
+          <th>Progress</th>
+          <th>Status</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{if .Requests}}
+        {{range .Requests}}
+        <tr class="hover">
+          <td class="font-mono font-medium text-sm">{{.NoWRWO}}</td>
+          <td>{{.RequesterName}}</td>
+          <td><span class="badge badge-ghost badge-sm">{{.Division}}</span></td>
+          <td class="text-sm text-gray-500">{{formatDate .SubmittedAt}}</td>
+          <td>
+            {{$cs := .CurrentStage}}
+            {{$st := .Status}}
+            <div class="flex gap-1 items-center">
+              <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold {{if ge $cs 1}}text-white{{else}}bg-gray-200 text-gray-400{{end}}" style="{{if ge $cs 1}}background:#568C20{{end}}">1</div>
+              <div class="w-3 h-px {{if ge $cs 2}}bg-green-400{{else}}bg-gray-200{{end}}"></div>
+              <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold {{if ge $cs 2}}text-white{{else}}bg-gray-200 text-gray-400{{end}}" style="{{if ge $cs 2}}background:#568C20{{end}}">2</div>
+              <div class="w-3 h-px {{if ge $cs 3}}bg-green-400{{else}}bg-gray-200{{end}}"></div>
+              <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold {{if eq $st "approved"}}text-white{{else if eq $cs 3}}bg-yellow-400 text-white{{else}}bg-gray-200 text-gray-400{{end}}" style="{{if eq $st "approved"}}background:#568C20{{end}}">3</div>
+            </div>
+          </td>
+          <td>
+            {{if eq .Status "approved"}}
+            <span style="background:rgba(22,163,74,0.08);color:#16a34a;border:1px solid rgba(22,163,74,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+              <span style="background:#16a34a" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Disetujui</span>
+            {{else if eq .Status "rejected"}}
+            <span style="background:rgba(220,38,38,0.08);color:#dc2626;border:1px solid rgba(220,38,38,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+              <span style="background:#dc2626" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Ditolak</span>
+            {{else}}
+              {{$cs2 := .CurrentStage}}
+              {{if eq $cs2 1}}
+              <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+                <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Tahap 1 - Admin SP</span>
+              {{else if eq $cs2 2}}
+              <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+                <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Tahap 2 - SPV Pemohon</span>
+              {{else if eq $cs2 3}}
+              <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+                <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Tahap 3 - SPV SP</span>
+              {{else}}
+              <span style="background:rgba(217,119,6,0.08);color:#d97706;border:1px solid rgba(217,119,6,0.2)" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
+                <span style="background:#d97706" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>Pending</span>
+              {{end}}
+            {{end}}
+          </td>
+          {{/* ─── SEMUA REQUEST: hanya lihat & download, TIDAK ADA validasi/approve/reject ─── */}}
+          <td>
+            <div class="flex gap-1 flex-wrap">
+              <a href="/pengambilan/semua/{{.ID}}" class="btn btn-xs btn-ghost border">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 mr-0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                </svg>
+                Lihat
+              </a>
+              {{if eq .Status "approved"}}
+              <a href="/struk/{{.ID}}/pdf" class="btn btn-xs text-white" style="background:#568C20;border-color:#568C20" target="_blank" title="Download Struk PDF">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 mr-0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+                Struk PDF
+              </a>
+              {{else}}
+              <span class="btn btn-xs btn-disabled opacity-40" title="PDF tersedia setelah semua tahap disetujui">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 mr-0.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                </svg>
+                Struk PDF
+              </span>
+              {{end}}
+            </div>
+          </td>
+        </tr>
+        {{end}}
+        {{else}}
+        <tr>
+          <td colspan="7" class="text-center py-12 text-gray-400">Belum ada request</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{{end}}
